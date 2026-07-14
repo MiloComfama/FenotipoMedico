@@ -75,8 +75,8 @@ def _start_survey(is_first: bool) -> None:
 
 def _survey_screen(is_first: bool) -> None:
     st.markdown("### Cuestionario de Medicina Funcional")
-    mode = "Asistente IA (Opus 4.8)" if using_llm() else "Asistente guiado"
-    st.caption(f"Modo: **{mode}**. Responde con naturalidad; puedes preguntar dudas.")
+    mode = "IA · Opus 4.8" if using_llm() else "modo guiado"
+    st.caption(f"Hablas con **Fénix** ({mode}). Responde con naturalidad; puedes preguntar dudas.")
 
     intake = st.session_state["pt_intake"]
     done, total = intake.progress()
@@ -84,7 +84,7 @@ def _survey_screen(is_first: bool) -> None:
         st.progress(min(done / total, 1.0), text=f"Avance: {done}/{total}")
 
     for msg in st.session_state["pt_chat"]:
-        avatar = "🧑" if msg["role"] == "user" else "💬"
+        avatar = "🧑" if msg["role"] == "user" else "🔥"
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 

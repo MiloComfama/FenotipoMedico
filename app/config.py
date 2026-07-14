@@ -22,6 +22,9 @@ load_dotenv(BASE_DIR / ".env")
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8").strip()
+# Nombre del recurso de Azure AI Foundry (solo si el modelo se consume vía Azure
+# en lugar de la API directa de Anthropic). Ej: "mi-recurso-foundry".
+ANTHROPIC_FOUNDRY_RESOURCE = os.getenv("ANTHROPIC_FOUNDRY_RESOURCE", "").strip()
 
 # --- Reglas de negocio ------------------------------------------------------
 # Tiempo mínimo entre consultas (cita de seguimiento).

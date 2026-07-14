@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from app.config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+from app.config import ANTHROPIC_API_KEY, ANTHROPIC_FOUNDRY_RESOURCE, ANTHROPIC_MODEL
 from app.domain.questionnaire import Question, Questionnaire
 
 
@@ -189,8 +189,8 @@ def _explain_question(question: Question) -> str:
 class ScriptedIntake(BaseIntake):
     def start(self) -> str:
         intro = (
-            f"¡Hola! 👋 Soy tu asistente del **Programa de Medicina Funcional de Comfama**. "
-            f"{self.q.intro.strip()}\n\nComencemos."
+            f"¡Hola! 👋 Soy **Fénix**, tu asistente del **Programa de Medicina Funcional "
+            f"de Comfama**. {self.q.intro.strip()}\n\nComencemos."
         )
         question = next_unanswered(self.q, self.is_first, self.answers)
         return f"{intro}\n\n{_format_question(question)}" if question else intro
@@ -224,14 +224,23 @@ class ScriptedIntake(BaseIntake):
 # Flujo con Opus 4.8
 # ===========================================================================
 SYSTEM_PROMPT = """\
-Eres el asistente conversacional del Programa de Medicina Funcional de Comfama.
-Tu único objetivo es acompañar a la persona a completar un cuestionario de salud
-de forma cálida, clara y respetuosa, en español (Colombia).
+Te llamas Fénix, el asistente conversacional del Programa de Medicina Funcional
+de Comfama. Tu único objetivo es acompañar a la persona a completar un
+cuestionario de salud de forma cálida, clara y respetuosa, en español (Colombia).
 
 REGLAS:
+- Preséntate por tu nombre (Fénix) en tu primer mensaje de la conversación.
 - Haz UNA pregunta a la vez, en lenguaje sencillo. No abrumes con listas largas.
-- Si la persona pregunta algo sobre el programa, su salud o el cuestionario,
-  respóndele brevemente y con empatía, y luego continúa con la pregunta pendiente.
+- Cuando una pregunta sea de tipo 'single' o 'multi', presenta SIEMPRE las
+  opciones como una lista numerada (1., 2., 3., ...) e invita a responder con
+  el número (o números separados por coma para 'multi'). Esto facilita que la
+  persona conteste sin tener que escribir el texto completo de la opción.
+- Solo resuelve dudas sobre la PREGUNTA ACTUAL pendiente (qué significa, cómo
+  responderla, ejemplos). Si la persona pregunta algo que NO tiene relación con
+  la pregunta actual (otro tema del programa, salud general, u otro asunto
+  ajeno), NO lo respondas: redirige amablemente indicando que puedes ayudarle
+  con eso más adelante o con el equipo médico, y vuelve a formular la pregunta
+  pendiente.
 - NO te desvíes del tema. Si te piden algo ajeno al programa (política, tareas,
   código, etc.), redirige amablemente al cuestionario.
 - NO entregues diagnósticos ni prescripciones. Aclara que la clasificación final
@@ -250,9 +259,10 @@ VALIDACIÓN DE FORMATO (muy importante):
   En su lugar, explica en una frase breve y amable qué formato se espera (con un
   ejemplo si ayuda) y vuelve a formular la MISMA pregunta pendiente.
 - Si la persona expresa una duda sobre la pregunta actual (pregunta qué significa
-  algo, pide ayuda, parece confundida, o su mensaje no es una respuesta sino una
-  pregunta), acláraselo con una explicación breve y un ejemplo si aplica, y luego
-  repite la pregunta pendiente SIN marcarla como respondida.
+  algo de ESA pregunta, pide ayuda para responderla, parece confundida, o su
+  mensaje no es una respuesta sino una pregunta relacionada con ella), acláraselo
+  con una explicación breve y un ejemplo si aplica, y luego repite la pregunta
+  pendiente (con sus opciones numeradas si aplica) SIN marcarla como respondida.
 - Cuando la persona responda correctamente, registra su respuesta con la
   herramienta `guardar_respuesta` usando el 'key' exacto.
 - Solo pregunta por los ítems aplicables; respeta las dependencias (depends_on).
@@ -296,9 +306,17 @@ TOOLS = [
 class LLMIntake(BaseIntake):
     def __init__(self, questionnaire: Questionnaire, is_first: bool):
         super().__init__(questionnaire, is_first)
-        from anthropic import Anthropic  # import perezoso
 
-        self._client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        if ANTHROPIC_FOUNDRY_RESOURCE:
+            from anthropic import AnthropicFoundry  # import perezoso
+
+            self._client = AnthropicFoundry(
+                api_key=ANTHROPIC_API_KEY, resource=ANTHROPIC_FOUNDRY_RESOURCE
+            )
+        else:
+            from anthropic import Anthropic  # import perezoso
+
+            self._client = Anthropic(api_key=ANTHROPIC_API_KEY)
         self._system = SYSTEM_PROMPT.format(schema=self._schema_json())
         self._done = False
 
