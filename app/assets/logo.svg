@@ -1,0 +1,7 @@
+<svg width="240" height="64" viewBox="0 0 240 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Comfama">
+  <style>
+    .wm { font-family: 'Poppins','Segoe UI',Arial,sans-serif; font-weight: 700; font-size: 42px; letter-spacing: -1px; }
+  </style>
+  <text x="0" y="46" class="wm" fill="#FF277E">comfama</text>
+  <circle cx="228" cy="42" r="6" fill="#FF277E"/>
+</svg>

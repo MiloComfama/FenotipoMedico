@@ -1,0 +1,20 @@
+# Entorno
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Base de datos local del prototipo
+data/*.db
+data/*.db-journal
+
+# Streamlit
+.streamlit/secrets.toml
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Claude Code (config local, no compartida)
+.claude/settings.local.json

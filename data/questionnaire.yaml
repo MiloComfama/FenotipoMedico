@@ -1,0 +1,158 @@
+# =============================================================================
+# Cuestionario de ingreso / seguimiento – Programa de Medicina Funcional Comfama
+# Derivado del formulario histórico "Preguntas y respuestas medico.xlsx".
+#
+# Este archivo es la ÚNICA fuente de verdad de las preguntas del cuestionario.
+# Para agregar/editar preguntas basta con modificar este YAML: la base de datos
+# usa un modelo llave-valor (EAV) y no requiere cambios de esquema.
+#
+# Tipos de pregunta admitidos:
+#   single  -> una sola opción (options)
+#   multi   -> varias opciones (options) -> se guarda lista separada por ";"
+#   bool    -> Sí / No
+#   number  -> valor numérico (min, max, unit opcionales)
+#   text    -> texto libre
+#
+# 'feature' marca respuestas que alimentan al clasificador clínico.
+# =============================================================================
+
+version: 1
+title: "Cuestionario de Medicina Funcional"
+intro: >
+  Este cuestionario nos ayuda a entender tus hábitos de vida y síntomas para
+  ofrecerte una atención más personalizada. Toma unos pocos minutos.
+
+sections:
+
+  - id: perfil
+    title: "Perfil"
+    only_first_consultation: true
+    questions:
+      - key: sexo
+        text: "¿Cuál es tu sexo biológico?"
+        type: single
+        options: ["Femenino", "Masculino", "Intersexual", "Prefiero no responder"]
+        help: >
+          Esta información nos ayuda a interpretar mejor tus resultados clínicos.
+          Puedes elegir "Prefiero no responder" si prefieres no compartirla.
+      - key: fecha_nacimiento
+        text: "¿Cuál es tu fecha de nacimiento? (AAAA-MM-DD)"
+        type: text
+        format: date
+        help: >
+          Escríbela en formato año-mes-día, por ejemplo 1990-05-21. La usamos
+          para calcular tu edad.
+
+  - id: alimentacion
+    title: "Hábitos de alimentación"
+    questions:
+      - key: habitos_alimentacion
+        text: "¿Cuáles de estos hábitos saludables de alimentación estás realizando?"
+        type: multi
+        help: >
+          Selecciona todos los hábitos que ya practicas actualmente, no los que
+          planeas empezar.
+        options:
+          - "Dejar de endulzar"
+          - "Dejar de consumir repostería"
+          - "Incorporar más vegetales"
+          - "Ajustar porciones de carbohidratos"
+          - "Aumentar consumo de proteína"
+          - "Otros"
+          - "Ninguno"
+
+  - id: actividad_fisica
+    title: "Actividad física"
+    questions:
+      - key: realiza_actividad
+        text: "¿Realizas actividad física con regularidad?"
+        type: bool
+        help: >
+          Cuenta cualquier actividad física intencional (caminar rápido,
+          gimnasio, deporte), no tareas cotidianas.
+      - key: tipo_actividad
+        text: "¿Qué tipo de actividad física realizas?"
+        type: text
+        depends_on: {key: realiza_actividad, equals: true}
+        help: >
+          Descríbela brevemente, por ejemplo: caminar, trotar, pesas,
+          natación, ciclismo, yoga, etc.
+      - key: duracion_actividad
+        text: "¿Cuánto dura cada sesión?"
+        type: single
+        options: ["Menos de 30 min", "30 a 60 min", "Más de 60 min"]
+        depends_on: {key: realiza_actividad, equals: true}
+        help: "Piensa en la duración típica de una sola sesión de ejercicio."
+      - key: frecuencia_actividad
+        text: "¿Cuántos días a la semana la realizas?"
+        type: single
+        options: ["1 a 2 días", "3 a 4 días", "5 o más días"]
+        depends_on: {key: realiza_actividad, equals: true}
+        help: "Cuenta los días de una semana normal en la que haces esa actividad."
+
+  - id: estres
+    title: "Manejo del estrés"
+    questions:
+      - key: altas_cargas_estres
+        text: "¿Consideras que tienes altas cargas de estrés?"
+        type: bool
+        feature: true
+        help: >
+          Piensa en tu percepción general de estrés en el último mes
+          (trabajo, familia, finanzas, etc.).
+      - key: persona_ansiosa
+        text: "¿Te consideras una persona ansiosa?"
+        type: bool
+        feature: true
+        help: "Refiere a cómo te describirías habitualmente, no solo en momentos puntuales."
+      - key: persona_nerviosa
+        text: "¿Te consideras una persona nerviosa?"
+        type: bool
+        feature: true
+        help: "Refiere a tu temperamento habitual, no a un episodio aislado."
+      - key: tecnica_gestion_estres
+        text: "¿Utilizas alguna técnica de gestión del estrés (meditación, oración, ejercicio, respiración)?"
+        type: bool
+        feature: true
+        help: "Cuenta cualquier práctica que uses para manejar el estrés, aunque no sea frecuente."
+
+  - id: medicamentos
+    title: "Medicamentos"
+    questions:
+      - key: medicamentos
+        text: "¿Usas actualmente alguno de estos medicamentos?"
+        type: multi
+        feature: true
+        help: >
+          Incluye medicamentos formulados por un médico que tomes
+          actualmente; si no tomas ninguno de la lista, elige "Ninguno".
+        options:
+          - "Hipoglicemiantes (para el azúcar)"
+          - "Hipolipemiantes (para el colesterol)"
+          - "Inhibidores de bomba de protones / antiácidos (omeprazol, etc.)"
+          - "Ninguno"
+
+  - id: sintomas_digestivos
+    title: "Síntomas gastrointestinales"
+    questions:
+      - key: sintomas_digestivos
+        text: "¿Has presentado alguno de los siguientes signos o síntomas gastrointestinales?"
+        type: multi
+        feature: true
+        help: >
+          Marca los síntomas que hayas presentado en las últimas semanas,
+          aunque sean leves u ocasionales.
+        options:
+          - "Reflujo gastroesofágico"
+          - "Capa blanca en la lengua"
+          - "Orofaringe eritematosa"
+          - "Eructos"
+          - "Gases"
+          - "Sabor amargo o metálico en la boca"
+          - "Sensación de agriera"
+          - "Episodios de epigastralgia"
+          - "Distensión abdominal"
+          - "Dolor a la palpación abdominal"
+          - "Ruidos intestinales aumentados"
+          - "Más de un día sin deposiciones"
+          - "Ninguno"
