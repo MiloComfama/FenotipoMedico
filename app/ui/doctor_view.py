@@ -17,6 +17,9 @@ from app.ui.patient_view import DOC_TYPES, _consultation_rows
 
 # PIN de demostración para el acceso profesional (solo prototipo).
 DOCTOR_PIN = "comfama"
+# Profesional asociado a este PIN. Se usa para trazar reclasificaciones/cambios
+# clínicos; no es editable desde el formulario para evitar suplantación.
+DOCTOR_NAME = "Mario Vélez Correa"
 
 # Laboratorios editables por el médico (EAV). Ampliable en el futuro.
 LAB_FIELDS = [
@@ -179,14 +182,15 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
             default=[v for v in current_medications if v in MEDICATION_OPTIONS],
         )
 
-        st.markdown("**Laboratorios**")
-        lab_cols = st.columns(len(LAB_FIELDS))
+        st.markdown("**Laboratorios** _(valores en mg/dL)_")
         lab_values = {}
-        for col, (key, label, unit) in zip(lab_cols, LAB_FIELDS):
-            lab_values[key] = col.number_input(
-                f"{label} ({unit})", 0.0, 1000.0,
-                float(labs.get(key) or 0), 1.0, key=f"lab_{consultation_id}_{key}",
-            ) or None
+        for row_start in range(0, len(LAB_FIELDS), 3):
+            lab_cols = st.columns(3)
+            for col, (key, label, unit) in zip(lab_cols, LAB_FIELDS[row_start:row_start + 3]):
+                lab_values[key] = col.number_input(
+                    label, 0.0, 1000.0,
+                    float(labs.get(key) or 0), 1.0, key=f"lab_{consultation_id}_{key}",
+                ) or None
 
         saved = st.form_submit_button("Guardar datos clínicos", type="primary")
 
@@ -219,16 +223,13 @@ def _classification_panel(consultation_id: int, current_phenotype: str, rows, n:
     with st.form(f"dr_reclass_{consultation_id}"):
         idx = PHENOTYPES.index(row["phenotype"]) if row["phenotype"] in PHENOTYPES else 0
         phenotype = st.selectbox("Fenotipo definitivo", PHENOTYPES, index=idx)
-        doctor = st.text_input("Profesional que reclasifica")
+        st.text_input("Profesional que reclasifica", value=DOCTOR_NAME, disabled=True)
         notes = st.text_area("Notas clínicas (opcional)")
         ok = st.form_submit_button("Guardar reclasificación", type="primary")
     if ok:
-        if not doctor.strip():
-            st.error("Indica el nombre del profesional.")
-        else:
-            _apply_reclassify(consultation_id, phenotype, doctor.strip(), notes.strip())
-            st.success(f"Paciente reclasificado como **{phenotype}** por {doctor}.")
-            st.rerun()
+        _apply_reclassify(consultation_id, phenotype, DOCTOR_NAME, notes.strip())
+        st.success(f"Paciente reclasificado como **{phenotype}** por {DOCTOR_NAME}.")
+        st.rerun()
 
     protocol = get_protocol(row["phenotype"])
     if protocol:

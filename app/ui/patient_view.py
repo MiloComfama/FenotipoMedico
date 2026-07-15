@@ -6,7 +6,7 @@ from datetime import datetime
 
 import streamlit as st
 
-from app.config import FOLLOW_UP_DAYS
+from app.config import ASSETS_DIR, FOLLOW_UP_DAYS
 from app.db import repository as repo
 from app.domain.questionnaire import load_questionnaire
 from app.domain.recommendations import get_protocol
@@ -16,6 +16,7 @@ from app.ui import charts
 from app.ui.branding import focus_chat_input, phenotype_badge
 
 DOC_TYPES = ["CC", "TI", "CE", "PA", "RC"]
+FENIX_AVATAR = str(ASSETS_DIR / "BotIcon.png")
 
 
 # --- Utilidades -------------------------------------------------------------
@@ -97,7 +98,7 @@ def _survey_screen(is_first: bool) -> None:
         st.progress(min(done / total, 1.0), text=f"Avance: {done}/{total}")
 
     for msg in st.session_state["pt_chat"]:
-        avatar = "🧑" if msg["role"] == "user" else "🔥"
+        avatar = "🧑" if msg["role"] == "user" else FENIX_AVATAR
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 

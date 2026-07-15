@@ -36,12 +36,13 @@ sections:
           Esta información nos ayuda a interpretar mejor tus resultados clínicos.
           Puedes elegir "Prefiero no responder" si prefieres no compartirla.
       - key: fecha_nacimiento
-        text: "¿Cuál es tu fecha de nacimiento? (AAAA-MM-DD)"
+        text: "¿Cuál es tu fecha de nacimiento?"
         type: text
         format: date
         help: >
-          Escríbela en formato año-mes-día, por ejemplo 1990-05-21. La usamos
-          para calcular tu edad.
+          Escríbela como te resulte más natural (ej. "26 de julio de 1991" o
+          "1991-07-26"); nosotros la interpretamos y la dejamos en el formato
+          correcto. La usamos para calcular tu edad.
 
   - id: alimentacion
     title: "Hábitos de alimentación"

@@ -79,6 +79,62 @@ def _format_question(question: Question) -> str:
     return "\n".join(lines)
 
 
+_SPANISH_MONTHS = {
+    "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5, "junio": 6,
+    "julio": 7, "agosto": 8, "septiembre": 9, "setiembre": 9, "octubre": 10,
+    "noviembre": 11, "diciembre": 12,
+}
+
+
+def _normalize_year(year: int) -> int:
+    """Interpreta años de 2 dígitos como parte del siglo XX (fechas de
+    nacimiento razonables), y deja los de 4 dígitos intactos."""
+    return 1900 + year if year < 100 else year
+
+
+def _parse_natural_date(text: str) -> str | None:
+    """Interpreta una fecha en lenguaje natural o en formatos comunes y la
+    normaliza a AAAA-MM-DD. Devuelve ``None`` si no logra interpretarla."""
+    text = text.strip().lower()
+
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        try:
+            datetime.strptime(text, "%Y-%m-%d")
+            return text
+        except ValueError:
+            return None
+
+    # "26 de julio de 1991" / "26 de julio del 91" / "26 julio 1991"
+    match = re.search(
+        r"(\d{1,2})\s*(?:de)?\s*([a-záéíóúñ]+)\s*(?:de|del)?\s*(\d{2,4})", text
+    )
+    if match:
+        day, month_name, year = match.groups()
+        month = _SPANISH_MONTHS.get(month_name.strip())
+        if month:
+            try:
+                return datetime(
+                    _normalize_year(int(year)), month, int(day)
+                ).strftime("%Y-%m-%d")
+            except ValueError:
+                return None
+
+    # Formatos numéricos: DD/MM/AAAA, DD-MM-AA, AAAA/MM/DD, etc.
+    match = re.fullmatch(r"(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})", text)
+    if match:
+        a, b, c = match.groups()
+        try:
+            if len(a) == 4:
+                year, month, day = int(a), int(b), int(c)
+            else:
+                day, month, year = int(a), int(b), _normalize_year(int(c))
+            return datetime(year, month, day).strftime("%Y-%m-%d")
+        except ValueError:
+            return None
+
+    return None
+
+
 def _parse_answer(question: Question, text: str) -> tuple[Any, str | None]:
     """Convierte el texto libre del usuario a un valor válido para la pregunta.
 
@@ -145,13 +201,13 @@ def _parse_answer(question: Question, text: str) -> tuple[Any, str | None]:
         return (int(value) if value.is_integer() else value), None
 
     if question.format == "date":
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
-            return None, "Usa el formato **AAAA-MM-DD** (ejemplo: 1990-05-21)."
-        try:
-            datetime.strptime(text, "%Y-%m-%d")
-        except ValueError:
-            return None, "Esa fecha no es válida. Usa el formato **AAAA-MM-DD**."
-        return text, None
+        normalized = _parse_natural_date(text)
+        if normalized is None:
+            return None, (
+                "No logré identificar una fecha válida. Puedes escribirla como "
+                "**AAAA-MM-DD** o en lenguaje natural (ej. \"26 de julio de 1991\")."
+            )
+        return normalized, None
 
     return text, None  # texto libre sin formato específico
 
@@ -253,11 +309,17 @@ VALIDACIÓN DE FORMATO (muy importante):
   · multi   -> cada elemento debe ser una de las 'opciones' listadas (arreglo).
   · bool    -> interprétalo como verdadero/falso (sí/no, afirmaciones claras).
   · number  -> debe ser un valor numérico; si hay min/max, debe estar en rango.
-  · text    -> si el 'unit' o el texto de la pregunta piden un formato concreto
-    (p. ej. una fecha AAAA-MM-DD), la respuesta debe cumplirlo estrictamente.
-- Si la respuesta NO cumple el formato esperado, NO llames a `guardar_respuesta`.
-  En su lugar, explica en una frase breve y amable qué formato se espera (con un
-  ejemplo si ayuda) y vuelve a formular la MISMA pregunta pendiente.
+  · text    -> si el 'formato' pide un patrón concreto (p. ej. una fecha
+    AAAA-MM-DD), interpreta la INTENCIÓN de la persona aunque la escriba en
+    lenguaje natural o en otro formato (ej. "26 de julio del 91", "5/05/1990",
+    "nací en 1994") y conviértela TÚ MISMO al formato exacto requerido antes de
+    guardarla con `guardar_respuesta`. No le pidas que reescriba la fecha en un
+    formato específico si su intención ya es clara.
+- Si la respuesta NO cumple el formato esperado Y además es ambigua o
+  incompleta (p. ej. falta el año, o no queda claro a qué valor se refiere),
+  NO llames a `guardar_respuesta`. En su lugar, explica en una frase breve y
+  amable qué información falta (con un ejemplo si ayuda) y vuelve a formular
+  la MISMA pregunta pendiente.
 - Si la persona expresa una duda sobre la pregunta actual (pregunta qué significa
   algo de ESA pregunta, pide ayuda para responderla, parece confundida, o su
   mensaje no es una respuesta sino una pregunta relacionada con ella), acláraselo
@@ -364,8 +426,11 @@ class LLMIntake(BaseIntake):
             self.history.append({"role": "assistant", "content": response.content})
 
             tool_results = []
+            has_text = False
             for block in response.content:
                 if block.type == "text":
+                    if block.text.strip():
+                        has_text = True
                     assistant_text_parts.append(block.text)
                 elif block.type == "tool_use":
                     result = self._apply_tool(block.name, block.input)
@@ -377,9 +442,13 @@ class LLMIntake(BaseIntake):
 
             if tool_results:
                 self.history.append({"role": "user", "content": tool_results})
-                if self._done:
+                if self._done or has_text:
+                    # Ya le mostramos texto real a la persona (p. ej. la
+                    # siguiente pregunta): paramos aquí y esperamos su próxima
+                    # respuesta real, en vez de dejar que el modelo siga
+                    # encadenando turnos por su cuenta.
                     break
-                continue  # dejamos que el modelo formule la siguiente pregunta
+                continue  # el modelo aún no ha formulado la siguiente pregunta; démosle un turno más
             break  # sin herramientas: el modelo ya respondió con texto
 
         return "\n\n".join(p for p in assistant_text_parts if p.strip()).strip() or "…"
