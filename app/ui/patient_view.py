@@ -25,10 +25,22 @@ def _reset_patient_state() -> None:
             del st.session_state[key]
 
 
+def _decode_classification(raw: str | None) -> tuple[dict, dict]:
+    """Lee el score guardado; soporta el formato legado (solo puntajes planos)
+    y el formato actual ``{"scores": ..., "rationale": ...}``."""
+    if not raw:
+        return {}, {}
+    data = json.loads(raw)
+    if isinstance(data, dict) and "scores" in data:
+        return data.get("scores") or {}, data.get("rationale") or {}
+    return data, {}
+
+
 def _consultation_rows(patient) -> list[dict]:
     rows = []
     for c in sorted(patient.consultations, key=lambda x: x.consultation_number):
         m = c.measurement
+        scores, rationale = _decode_classification(c.classification_score)
         rows.append({
             "n": c.consultation_number,
             "phenotype": c.phenotype_final or c.phenotype_model,
@@ -36,7 +48,8 @@ def _consultation_rows(patient) -> list[dict]:
             "bmi": m.bmi if m else None,
             "waist_cm": m.waist_cm if m else None,
             "bp_systolic": m.bp_systolic if m else None,
-            "scores": json.loads(c.classification_score) if c.classification_score else {},
+            "scores": scores,
+            "rationale": rationale,
         })
     return rows
 
@@ -126,6 +139,7 @@ def _dashboard_screen(patient) -> None:
     latest = rows[-1]
     phenotype = latest["phenotype"]
     scores = latest["scores"]
+    rationale = latest["rationale"]
 
     fu = repo.check_follow_up(patient)
 
@@ -158,8 +172,19 @@ def _dashboard_screen(patient) -> None:
     cols = st.columns([1, 1])
     with cols[0]:
         if scores:
-            st.markdown("**Afinidad por eje clínico**")
-            st.plotly_chart(charts.score_bars(scores), use_container_width=True)
+            st.markdown("**Perfil de Afinidad Clínica**")
+            st.caption(
+                "Qué tan relacionadas están tus respuestas de la encuesta con cada perfil "
+                "de salud. Pasa el cursor sobre cada barra para ver el detalle."
+            )
+            st.plotly_chart(charts.score_bars(scores, rationale), use_container_width=True)
+            with st.expander("¿Por qué obtuve este resultado?"):
+                for axis, reasons in rationale.items():
+                    st.markdown(f"**{axis}**")
+                    for r in reasons:
+                        st.markdown(f"- {r}")
+            st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+            st.markdown("**Categoría del fenotipo**")
             conf = max(scores.values()) if scores else 0.5
             st.plotly_chart(charts.phenotype_gauge(phenotype, conf), use_container_width=True)
     with cols[1]:

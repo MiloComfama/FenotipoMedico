@@ -98,6 +98,14 @@ def next_consultation_number(patient: Patient) -> int:
     return max(c.consultation_number for c in patient.consultations) + 1
 
 
+def _encode_classification(
+    scores: dict[str, float] | None, rationale: dict[str, list[str]] | None
+) -> str | None:
+    if not scores:
+        return None
+    return json.dumps({"scores": scores, "rationale": rationale or {}}, ensure_ascii=False)
+
+
 def create_consultation(
     session: Session,
     patient: Patient,
@@ -105,6 +113,7 @@ def create_consultation(
     questionnaire_texts: dict[str, str],
     phenotype_model: str | None,
     scores: dict[str, float] | None,
+    rationale: dict[str, list[str]] | None = None,
 ) -> Consultation:
     """Crea una consulta con sus respuestas de cuestionario."""
     number = next_consultation_number(patient)
@@ -115,7 +124,7 @@ def create_consultation(
         phenotype_model=phenotype_model,
         phenotype_final=phenotype_model,
         classification_source="modelo",
-        classification_score=json.dumps(scores, ensure_ascii=False) if scores else None,
+        classification_score=_encode_classification(scores, rationale),
     )
     session.add(consultation)
     session.flush()
@@ -132,6 +141,15 @@ def create_consultation(
         )
     session.flush()
     return consultation
+
+
+def update_classification_score(
+    session: Session,
+    consultation: Consultation,
+    scores: dict[str, float] | None,
+    rationale: dict[str, list[str]] | None,
+) -> None:
+    consultation.classification_score = _encode_classification(scores, rationale)
 
 
 def _serialize(value: Any) -> str | None:
@@ -155,6 +173,19 @@ def upsert_measurement(
         session.add(m)
         consultation.measurement = m
     return m
+
+
+def upsert_survey_answer(
+    session: Session, consultation: Consultation, key: str, text: str, value: Any,
+) -> None:
+    existing = next((a for a in consultation.answers if a.question_key == key), None)
+    serialized = _serialize(value)
+    if existing:
+        existing.answer_value = serialized
+    else:
+        consultation.answers.append(
+            SurveyAnswer(question_key=key, question_text=text, answer_value=serialized)
+        )
 
 
 def set_lab_result(

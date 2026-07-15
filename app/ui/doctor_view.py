@@ -27,6 +27,16 @@ LAB_FIELDS = [
     ("glicemia", "Glicemia en ayunas", "mg/dL"),
 ]
 
+MEDICATION_KEY = "medicamentos_actuales"
+MEDICATION_QUESTION = "¿Actualmente utiliza alguno de los siguientes medicamentos?"
+MEDICATION_OPTIONS = [
+    "Hipolipemiantes",
+    "Hipoglicemiantes",
+    "Antiácidos",
+    "Inhibidores de la bomba de protones (Esomeprazol, lanzoprazol, pantoprazol, omeprazol)",
+    "Ninguno",
+]
+
 
 # --- Persistencia -----------------------------------------------------------
 def _save_measurement(consultation_id: int, data: dict) -> None:
@@ -40,6 +50,12 @@ def _save_labs(consultation_id: int, labs: dict[str, float | None]) -> None:
         c = session.get(Consultation, consultation_id)
         for key, label, unit in LAB_FIELDS:
             repo.set_lab_result(session, c, key, label, labs.get(key), unit)
+
+
+def _save_medications(consultation_id: int, medications: list[str]) -> None:
+    with get_session() as session:
+        c = session.get(Consultation, consultation_id)
+        repo.upsert_survey_answer(session, c, MEDICATION_KEY, MEDICATION_QUESTION, medications)
 
 
 def _apply_reclassify(consultation_id: int, phenotype: str, doctor: str, notes: str) -> None:
@@ -71,7 +87,7 @@ def render() -> None:
     if not _gate():
         return
 
-    st.markdown("### Consola médica")
+    st.markdown("### Gestión médica")
     with st.form("dr_search"):
         c1, c2, c3 = st.columns([1, 2, 1])
         doc_type = c1.selectbox("Tipo de documento", DOC_TYPES)
@@ -98,7 +114,8 @@ def render() -> None:
     info[0].markdown(
         f"**Paciente:** {patient.full_name or '—'}  \n"
         f"**Documento:** {doc_type} {doc_number}  \n"
-        f"**Sexo:** {patient.sex or '—'} · **Nacimiento:** {patient.birthdate or '—'}"
+        f"**Sexo:** {patient.sex or '—'}  \n"
+        f"**Fecha de nacimiento:** {patient.birthdate or '—'}"
     )
     info[1].metric("Consultas", len(rows))
     info[2].markdown("**Clasificación actual**")
@@ -108,7 +125,7 @@ def render() -> None:
     numbers = [r["n"] for r in rows]
     sel_n = st.selectbox(
         "Consulta a gestionar", numbers, index=len(numbers) - 1,
-        format_func=lambda n: f"Consulta #{n}",
+        format_func=_consultation_label,
     )
     consultation_id = _consultation_id_for(patient, sel_n)
 
@@ -126,17 +143,23 @@ def render() -> None:
         _charts_panel(rows)
 
 
+def _consultation_label(n: int) -> str:
+    return "Ingreso" if n == 1 else f"Control {n - 1}"
+
+
 def _consultation_id_for(patient, n: int) -> int:
     return next(c.id for c in patient.consultations if c.consultation_number == n)
 
 
 def _current_measurement(patient, n: int):
     c = next(c for c in patient.consultations if c.consultation_number == n)
-    return c.measurement, {l.test_key: l.value for l in c.labs}
+    answer = next((a for a in c.answers if a.question_key == MEDICATION_KEY), None)
+    medications = answer.answer_value.split(";") if answer and answer.answer_value else []
+    return c.measurement, {l.test_key: l.value for l in c.labs}, medications
 
 
 def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
-    m, labs = _current_measurement(patient, n)
+    m, labs, current_medications = _current_measurement(patient, n)
     st.markdown("**Datos básicos** (el IMC se calcula automáticamente)")
     with st.form(f"dr_meas_{consultation_id}"):
         c1, c2, c3 = st.columns(3)
@@ -149,6 +172,12 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
 
         bmi = round(weight / (height ** 2), 1) if weight and height else None
         st.metric("IMC (autocalculado)", bmi if bmi else "—")
+
+        medications = st.multiselect(
+            MEDICATION_QUESTION,
+            MEDICATION_OPTIONS,
+            default=[v for v in current_medications if v in MEDICATION_OPTIONS],
+        )
 
         st.markdown("**Laboratorios**")
         lab_cols = st.columns(len(LAB_FIELDS))
@@ -171,6 +200,7 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
             "bp_diastolic": dbp or None,
         })
         _save_labs(consultation_id, lab_values)
+        _save_medications(consultation_id, medications)
         result = intake_service.recompute_classification(consultation_id)
         st.success(
             f"Datos guardados. Sugerencia del modelo actualizada: **{result.phenotype}**."
@@ -183,7 +213,7 @@ def _classification_panel(consultation_id: int, current_phenotype: str, rows, n:
     scores = row["scores"]
     st.markdown("**Sugerencia del modelo**")
     if scores:
-        st.plotly_chart(charts.score_bars(scores), use_container_width=True)
+        st.plotly_chart(charts.score_bars(scores, row.get("rationale")), use_container_width=True)
 
     st.markdown("**Reclasificación por criterio médico**")
     with st.form(f"dr_reclass_{consultation_id}"):

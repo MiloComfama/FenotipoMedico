@@ -17,16 +17,52 @@ def _layout(fig: go.Figure, height: int = 300) -> go.Figure:
     return fig
 
 
-def score_bars(scores: dict[str, float]) -> go.Figure:
-    """Barras horizontales con la afinidad a cada eje clínico."""
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    h = hex_color.lstrip("#")
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def _rgb_to_hex(rgb: tuple[float, float, float]) -> str:
+    return "#" + "".join(f"{round(max(0, min(255, c))):02X}" for c in rgb)
+
+
+def _semaphore_color(value: float) -> str:
+    """Degradado rojo → ámbar → verde según la magnitud del porcentaje (no por
+    rangos fijos), para que el color varíe con cada valor y la gráfica no se
+    vea plana."""
+    value = max(0.0, min(100.0, value))
+    stops = [(0, BRAND["danger"]), (50, BRAND["warning"]), (100, BRAND["success"])]
+    for (v0, c0), (v1, c1) in zip(stops, stops[1:]):
+        if v0 <= value <= v1:
+            t = (value - v0) / (v1 - v0)
+            rgb0, rgb1 = _hex_to_rgb(c0), _hex_to_rgb(c1)
+            blended = tuple(a + (b - a) * t for a, b in zip(rgb0, rgb1))
+            return _rgb_to_hex(blended)
+    return stops[-1][1]
+
+
+def score_bars(
+    scores: dict[str, float], rationale: dict[str, list[str]] | None = None
+) -> go.Figure:
+    """Barras horizontales con la afinidad a cada eje clínico.
+
+    Al pasar sobre cada barra se muestra, en lenguaje sencillo, qué respuestas
+    reales de la encuesta explican ese porcentaje.
+    """
     labels = list(scores.keys())
     values = [round(scores[k] * 100) for k in labels]
-    colors = [PHENOTYPE_COLORS.get(k, BRAND["primary"]) for k in labels]
+    colors = [_semaphore_color(v) for v in values]
+    hover = [
+        "<br>".join(f"• {r}" for r in (rationale or {}).get(label, []))
+        or "Aún no hay suficientes respuestas para explicar este eje."
+        for label in labels
+    ]
     fig = go.Figure(
         go.Bar(
             x=values, y=labels, orientation="h",
             marker_color=colors,
             text=[f"{v}%" for v in values], textposition="outside",
+            hovertext=hover, hoverinfo="text",
         )
     )
     fig.update_xaxes(range=[0, 100], title="Afinidad (%)")
@@ -34,21 +70,29 @@ def score_bars(scores: dict[str, float]) -> go.Figure:
 
 
 def phenotype_gauge(phenotype: str, confidence: float) -> go.Figure:
-    color = PHENOTYPE_COLORS.get(phenotype, BRAND["primary"])
+    value = round(confidence * 100)
+    color = _semaphore_color(value)
     fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
-            value=round(confidence * 100),
+            value=value,
             number={"suffix": "%"},
-            title={"text": f"Confianza · {phenotype}"},
+            title={"text": f"Categoría · {phenotype}"},
             gauge={
                 "axis": {"range": [0, 100]},
                 "bar": {"color": color},
                 "bgcolor": BRAND["surface"],
+                "steps": [
+                    {"range": [0, 40], "color": "#FBEAEC"},
+                    {"range": [40, 70], "color": "#FCF1DD"},
+                    {"range": [70, 100], "color": "#E5F5EE"},
+                ],
             },
         )
     )
-    return _layout(fig, height=260)
+    fig = _layout(fig, height=200)
+    fig.update_layout(margin=dict(l=40, r=40, t=40, b=10))
+    return fig
 
 
 def measurement_trend(consultations: list[dict], field: str, label: str) -> go.Figure:

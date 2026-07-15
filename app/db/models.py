@@ -14,6 +14,7 @@ puede sobrescribir). Así queda trazabilidad modelo vs. criterio médico.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import (
     DateTime,
@@ -39,9 +40,9 @@ class Patient(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     doc_type: Mapped[str] = mapped_column(String(8), default="CC")
     doc_number: Mapped[str] = mapped_column(String(32), index=True)
-    full_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    sex: Mapped[str | None] = mapped_column(String(24), nullable=True)
-    birthdate: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    full_name: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    sex: Mapped[Optional[str]] = mapped_column(String(24), nullable=True)
+    birthdate: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     consultations: Mapped[list["Consultation"]] = relationship(
@@ -60,18 +61,18 @@ class Consultation(Base):
     consultation_type: Mapped[str] = mapped_column(String(16), default="Ingreso")  # Ingreso / Control
     consultation_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    phenotype_model: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    phenotype_final: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    phenotype_model: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    phenotype_final: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     classification_source: Mapped[str] = mapped_column(String(16), default="modelo")  # modelo / medico
-    classification_score: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON con puntajes
-    reclassified_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    classification_score: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON con puntajes
+    reclassified_by: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     patient: Mapped[Patient] = relationship(back_populates="consultations")
     answers: Mapped[list["SurveyAnswer"]] = relationship(
         back_populates="consultation", cascade="all, delete-orphan"
     )
-    measurement: Mapped["Measurement | None"] = relationship(
+    measurement: Mapped[Optional["Measurement"]] = relationship(
         back_populates="consultation", uselist=False, cascade="all, delete-orphan"
     )
     labs: Mapped[list["LabResult"]] = relationship(
@@ -88,7 +89,7 @@ class SurveyAnswer(Base):
     consultation_id: Mapped[int] = mapped_column(ForeignKey("consultations.id"), index=True)
     question_key: Mapped[str] = mapped_column(String(64), index=True)
     question_text: Mapped[str] = mapped_column(Text)
-    answer_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     consultation: Mapped[Consultation] = relationship(back_populates="answers")
 
@@ -100,12 +101,12 @@ class Measurement(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     consultation_id: Mapped[int] = mapped_column(ForeignKey("consultations.id"), unique=True)
-    weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
-    height_m: Mapped[float | None] = mapped_column(Float, nullable=True)
-    bmi: Mapped[float | None] = mapped_column(Float, nullable=True)  # autocalculado
-    waist_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
-    bp_systolic: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    bp_diastolic: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    height_m: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    bmi: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # autocalculado
+    waist_cm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    bp_systolic: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    bp_diastolic: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     consultation: Mapped[Consultation] = relationship(back_populates="measurement")
 
@@ -119,7 +120,7 @@ class LabResult(Base):
     consultation_id: Mapped[int] = mapped_column(ForeignKey("consultations.id"), index=True)
     test_key: Mapped[str] = mapped_column(String(64), index=True)
     test_label: Mapped[str] = mapped_column(String(120))
-    value: Mapped[float | None] = mapped_column(Float, nullable=True)
-    unit: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    unit: Mapped[Optional[str]] = mapped_column(String(24), nullable=True)
 
     consultation: Mapped[Consultation] = relationship(back_populates="labs")

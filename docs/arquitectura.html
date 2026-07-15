@@ -1,0 +1,701 @@
+<title>Fenotipo Médico · Arquitectura</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --surface: #F7F5F8;
+    --surface-alt: #FBEAF2;
+    --border: #E6E1EA;
+    --ink: #2A2A33;
+    --muted: #6B6B76;
+    --primary: #FF277E;
+    --primary-dark: #C71760;
+    --success: #1FA97B;
+    --warning: #E9A23B;
+    --danger: #E0334C;
+    --pheno-cardio: #E0334C;
+    --pheno-digest: #1FA97B;
+    --pheno-mixto: #7B4F9E;
+    --shadow: 0 1px 2px rgba(42,42,51,.05), 0 8px 24px -12px rgba(42,42,51,.12);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17151B;
+      --surface: #201E26;
+      --surface-alt: #2B1620;
+      --border: #332F3B;
+      --ink: #F3F1F5;
+      --muted: #ACA8B4;
+      --primary: #FF4C93;
+      --primary-dark: #FF7DB0;
+      --success: #2ECC94;
+      --warning: #F0B45C;
+      --danger: #F2536B;
+      --pheno-cardio: #F2536B;
+      --pheno-digest: #2ECC94;
+      --pheno-mixto: #B085E0;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17151B; --surface: #201E26; --surface-alt: #2B1620; --border: #332F3B;
+    --ink: #F3F1F5; --muted: #ACA8B4; --primary: #FF4C93; --primary-dark: #FF7DB0;
+    --success: #2ECC94; --warning: #F0B45C; --danger: #F2536B;
+    --pheno-cardio: #F2536B; --pheno-digest: #2ECC94; --pheno-mixto: #B085E0;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"] {
+    --bg: #FFFFFF; --surface: #F7F5F8; --surface-alt: #FBEAF2; --border: #E6E1EA;
+    --ink: #2A2A33; --muted: #6B6B76; --primary: #FF277E; --primary-dark: #C71760;
+    --success: #1FA97B; --warning: #E9A23B; --danger: #E0334C;
+    --pheno-cardio: #E0334C; --pheno-digest: #1FA97B; --pheno-mixto: #7B4F9E;
+    --shadow: 0 1px 2px rgba(42,42,51,.05), 0 8px 24px -12px rgba(42,42,51,.12);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--primary); color: #fff; }
+
+  .mono {
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', 'SFMono-Regular', monospace;
+  }
+
+  a { color: var(--primary-dark); }
+  :root[data-theme="dark"] a, @media (prefers-color-scheme: dark) { }
+
+  h1, h2, h3, h4 { text-wrap: balance; font-weight: 700; margin: 0; }
+  p { margin: 0; }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    padding: 40px max(24px, calc(50% - 460px)) 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface-alt) 0%, var(--bg) 100%);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--primary-dark);
+    margin-bottom: 12px;
+  }
+  .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 999px; background: var(--primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+  .masthead h1 {
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    line-height: 1.12;
+    letter-spacing: -.01em;
+  }
+  .masthead .tagline {
+    margin-top: 10px;
+    max-width: 62ch;
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .badges {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 20px;
+  }
+  .badge {
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .badge b { color: var(--primary-dark); font-weight: 700; }
+
+  /* ---------- Nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.toc ul {
+    list-style: none; margin: 0; padding: 0 max(24px, calc(50% - 460px));
+    display: flex; gap: 4px; overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  nav.toc a {
+    display: inline-block;
+    padding: 12px 12px;
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); }
+
+  /* ---------- Main content ---------- */
+  main { padding: 8px max(24px, calc(50% - 460px)) 64px; }
+  section { padding-top: 46px; max-width: 920px; }
+  section + section { border-top: 1px solid var(--border); }
+
+  .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .section-head .kicker {
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+    font-size: .78rem; color: var(--muted);
+  }
+  h2 { font-size: 1.4rem; }
+  section > .lede {
+    margin-top: 10px;
+    max-width: 72ch;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: .98rem;
+  }
+  section > .lede + .lede { margin-top: 8px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .diagram {
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .diagram pre.mermaid { margin: 0; display: flex; justify-content: center; }
+  .diagram-caption {
+    margin-top: 10px;
+    font-size: .82rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px;
+  }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .strategy-card h4 { font-size: .95rem; margin-bottom: 8px; }
+  .strategy-card .mono-tag {
+    display: inline-block; font-size: .72rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; margin-bottom: 8px;
+    background: var(--surface-alt); color: var(--primary-dark);
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  }
+  .strategy-card p { font-size: .88rem; color: var(--muted); line-height: 1.55; }
+  .strategy-card ul { margin: 8px 0 0; padding-left: 18px; font-size: .86rem; color: var(--muted); }
+  .strategy-card li + li { margin-top: 4px; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 18px; font-size: .9rem;
+  }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+  td code, td .mono { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: .85rem; color: var(--primary-dark); }
+  .table-wrap { overflow-x: auto; }
+
+  .pheno-chip { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 600; }
+  .pheno-chip::before { content: ""; width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
+  .pheno-cardio::before { background: var(--pheno-cardio); }
+  .pheno-digest::before { background: var(--pheno-digest); }
+  .pheno-mixto::before { background: var(--pheno-mixto); }
+
+  .roadmap { margin-top: 18px; display: flex; flex-direction: column; gap: 0; }
+  .roadmap-item {
+    display: grid; grid-template-columns: 34px 1fr; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .roadmap-item:last-child { border-bottom: none; }
+  .roadmap-num {
+    width: 30px; height: 30px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .82rem; font-weight: 700;
+    background: var(--surface-alt); color: var(--primary-dark);
+  }
+  .roadmap-item.done .roadmap-num { background: var(--primary); color: #fff; }
+  .roadmap-item h4 { font-size: .95rem; margin-bottom: 3px; }
+  .roadmap-item p { font-size: .87rem; color: var(--muted); line-height: 1.5; }
+  .status-tag {
+    font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    padding: 2px 7px; border-radius: 5px; margin-left: 8px; vertical-align: middle;
+  }
+  .status-tag.live { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
+  .status-tag.next { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
+  .status-tag.future { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+
+  .steps { counter-reset: step; margin-top: 18px; }
+  .step {
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px;
+    padding: 10px 0;
+  }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78rem; font-weight: 700; color: var(--primary-dark);
+    font-family: ui-monospace, monospace;
+  }
+  .step code, .step pre {
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+    font-size: .82rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: block;
+    overflow-x: auto;
+    color: var(--ink);
+  }
+  .step p { font-size: .9rem; color: var(--muted); margin-top: 4px; }
+
+  .callout {
+    margin-top: 18px;
+    display: flex; gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    font-size: .88rem;
+    line-height: 1.55;
+  }
+  .callout b { color: var(--primary-dark); }
+
+  footer {
+    padding: 28px max(24px, calc(50% - 460px)) 40px;
+    border-top: 1px solid var(--border);
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  a:focus-visible, .badge:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    section { animation: none; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="eyebrow"><span class="dot"></span>Documentación de arquitectura</div>
+  <h1>Fenotipo Médico</h1>
+  <p class="tagline">
+    Segmentación inteligente de pacientes para el Programa de Medicina Funcional
+    de Comfama — clasifica cada consulta en <span class="pheno-chip pheno-cardio">Cardiometabólico</span>,
+    <span class="pheno-chip pheno-digest">Digestivo</span> o
+    <span class="pheno-chip pheno-mixto">Mixto</span>, combinando hábitos de vida
+    con datos clínicos.
+  </p>
+  <div class="badges">
+    <span class="badge">Python</span>
+    <span class="badge">Streamlit</span>
+    <span class="badge">SQLAlchemy · SQLite</span>
+    <span class="badge">Plotly</span>
+    <span class="badge">Claude <b>Opus 4.8</b></span>
+    <span class="badge">Azure AI Foundry</span>
+    <span class="badge">Databricks (ML offline)</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#resumen">Resumen</a></li>
+    <li><a href="#arquitectura">Arquitectura</a></li>
+    <li><a href="#componentes">Componentes</a></li>
+    <li><a href="#flujo">Flujo</a></li>
+    <li><a href="#datos">Modelo de datos</a></li>
+    <li><a href="#fenix">Asistente Fénix</a></li>
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="#roadmap">Hoja de ruta</a></li>
+    <li><a href="#ejecutar">Cómo ejecutar</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <section id="resumen">
+    <div class="section-head"><span class="kicker">01</span><h2>Resumen ejecutivo</h2></div>
+    <p class="lede">
+      El prototipo tiene dos vistas Streamlit sobre una misma base de datos:
+      el <b>paciente</b> completa un cuestionario conversacional (guiado por
+      "Fénix") que alimenta su clasificación de fenotipo y recomendaciones; el
+      <b>equipo médico</b> registra antropometría y laboratorios, y puede
+      reclasificar por criterio clínico. Cada consulta queda numerada y
+      trazable, con la regla de negocio de <b>una cita de seguimiento cada 30
+      días</b>.
+    </p>
+    <p class="lede">
+      La clasificación hoy corre sobre un motor de reglas transparente,
+      diseñado para ser reemplazado — sin tocar la UI ni la base de datos —
+      por el modelo entrenado que sale del pipeline de clustering en
+      <span class="mono">databricks/</span>.
+    </p>
+  </section>
+
+  <section id="arquitectura">
+    <div class="section-head"><span class="kicker">02</span><h2>Diagrama de arquitectura</h2></div>
+    <p class="lede">
+      Capas de la aplicación y los sistemas externos con los que se integra:
+      el chat conversacional habla con Claude Opus 4.8 (vía Azure AI Foundry,
+      con la API directa de Anthropic como alternativa), y el pipeline de
+      Databricks alimenta —a futuro— el clasificador de dominio.
+    </p>
+    <div class="diagram">
+      <pre class="mermaid">
+graph TB
+    subgraph Cliente["Cliente"]
+        Browser["Navegador · Streamlit UI"]
+    end
+
+    subgraph App["Aplicación Streamlit (app/)"]
+        Main["main.py&lt;br/&gt;Router + tema"]
+        UIPatient["ui/patient_view.py&lt;br/&gt;Vista paciente"]
+        UIDoctor["ui/doctor_view.py&lt;br/&gt;Vista médico"]
+        Services["services/&lt;br/&gt;chat.py · intake.py"]
+        Domain["domain/&lt;br/&gt;questionnaire · classifier · recommendations"]
+        DataAccess["db/&lt;br/&gt;repository · database (SQLAlchemy)"]
+    end
+
+    subgraph Datos["Persistencia"]
+        SQLite[("SQLite&lt;br/&gt;fenotipo.db")]
+        FutureDB[("futuro:&lt;br/&gt;SQL Server / Microsoft Fabric")]
+    end
+
+    subgraph IA["IA conversacional"]
+        Foundry["Azure AI Foundry&lt;br/&gt;(AnthropicFoundry)"]
+        AnthropicAPI["API directa de Anthropic&lt;br/&gt;(alternativa)"]
+        Opus["Claude Opus 4.8 · 'Fénix'"]
+    end
+
+    subgraph MLOffline["Pipeline ML offline (Databricks)"]
+        Notebooks["Notebooks 01→04&lt;br/&gt;clustering KMeans"]
+        ModelPkl["model.pkl&lt;br/&gt;(futuro clasificador entrenado)"]
+    end
+
+    Browser --&gt; Main
+    Main --&gt; UIPatient
+    Main --&gt; UIDoctor
+    UIPatient --&gt; Services
+    UIDoctor --&gt; Services
+    Services --&gt; Domain
+    Services --&gt; DataAccess
+    UIPatient --&gt; DataAccess
+    UIDoctor --&gt; DataAccess
+    Domain --&gt; DataAccess
+    DataAccess --&gt; SQLite
+    SQLite -.-&gt;|migración futura| FutureDB
+    Services --&gt; Foundry
+    Services --&gt;|si no hay clave / falla| AnthropicAPI
+    Foundry --&gt; Opus
+    AnthropicAPI --&gt; Opus
+    Notebooks --&gt; ModelPkl
+    ModelPkl -.-&gt;|reemplaza al clasificador de reglas| Domain
+      </pre>
+    </div>
+  </section>
+
+  <section id="componentes">
+    <div class="section-head"><span class="kicker">03</span><h2>Diagrama de componentes</h2></div>
+    <p class="lede">
+      Dos puntos de extensión del prototipo, resueltos con el mismo patrón
+      (interfaz + implementaciones intercambiables): el <span class="mono">BaseIntake</span>
+      del chat y el <span class="mono">Classifier</span> del dominio.
+    </p>
+    <div class="diagram">
+      <pre class="mermaid">
+classDiagram
+    class BaseIntake {
+        &lt;&lt;abstract&gt;&gt;
+        +Questionnaire q
+        +bool is_first
+        +dict answers
+        +start() str
+        +handle(texto) ChatTurn
+        +progress() tuple
+    }
+    class ScriptedIntake {
+        +start() str
+        +handle(texto) ChatTurn
+    }
+    class LLMIntake {
+        -client AnthropicFoundry~Anthropic
+        +start() str
+        +handle(texto) ChatTurn
+        -_run_turn() str
+        -_apply_tool(nombre, payload) str
+    }
+    BaseIntake &lt;|-- ScriptedIntake : sin clave de IA
+    BaseIntake &lt;|-- LLMIntake : con Opus 4.8
+    LLMIntake --&gt; Questionnaire : usa
+
+    class Questionnaire {
+        +int version
+        +list~Section~ sections
+        +questions_for(is_first) list
+    }
+    class Classifier {
+        &lt;&lt;interface&gt;&gt;
+        +predict(features) ClassificationResult
+    }
+    class RuleBasedClassifier
+    class TrainedClassifier {
+        &lt;&lt;futuro&gt;&gt;
+    }
+    RuleBasedClassifier ..|&gt; Classifier
+    TrainedClassifier ..|&gt; Classifier : model.pkl
+      </pre>
+    </div>
+    <div class="grid-2">
+      <div class="card strategy-card">
+        <span class="mono-tag">BaseIntake</span>
+        <h4>Cuestionario conversacional</h4>
+        <p>Dos estrategias intercambiables detrás de la misma interfaz:</p>
+        <ul>
+          <li><b>LLMIntake</b> — Claude Opus 4.8, valida formato y numera opciones.</li>
+          <li><b>ScriptedIntake</b> — flujo guiado sin IA, respaldo si no hay clave.</li>
+        </ul>
+      </div>
+      <div class="card strategy-card">
+        <span class="mono-tag">Classifier</span>
+        <h4>Clasificación de fenotipo</h4>
+        <p>El dominio no sabe cuál implementación corre — solo consume <span class="mono">predict()</span>:</p>
+        <ul>
+          <li><b>RuleBasedClassifier</b> — reglas clínicas transparentes (hoy).</li>
+          <li><b>TrainedClassifier</b> — modelo de <span class="mono">model.pkl</span> (futuro).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="flujo">
+    <div class="section-head"><span class="kicker">04</span><h2>Diagrama de flujo</h2></div>
+    <p class="lede">
+      Recorrido completo de una primera consulta: del saludo de Fénix a la
+      clasificación persistida y el tablero del paciente.
+    </p>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    actor Paciente
+    participant UI as Streamlit UI
+    participant Fenix as Fénix (LLMIntake)
+    participant Azure as Azure AI Foundry&lt;br/&gt;(Claude Opus 4.8)
+    participant Intake as intake_service
+    participant Clf as Classifier
+    participant DB as SQLite (SQLAlchemy)
+
+    Paciente-&gt;&gt;UI: Ingresa documento
+    UI-&gt;&gt;Fenix: create_intake() + start()
+    Fenix-&gt;&gt;Azure: messages.create(system, tools)
+    Azure--&gt;&gt;Fenix: pregunta + herramienta guardar_respuesta
+    Fenix--&gt;&gt;UI: mensaje con opciones numeradas
+    UI--&gt;&gt;Paciente: muestra pregunta
+
+    loop hasta completar el cuestionario
+        Paciente-&gt;&gt;UI: responde (número o texto)
+        UI-&gt;&gt;Fenix: handle(texto)
+        Fenix-&gt;&gt;Azure: nuevo turno + historial
+        Azure--&gt;&gt;Fenix: guardar_respuesta(key, valor) o aclaración
+        Fenix--&gt;&gt;UI: siguiente pregunta / respuesta a la duda
+    end
+
+    Azure--&gt;&gt;Fenix: finalizar(mensaje_cierre)
+    Fenix--&gt;&gt;UI: cuestionario completo
+    UI-&gt;&gt;Intake: save_new_consultation(respuestas)
+    Intake-&gt;&gt;Clf: predict(features)
+    Clf--&gt;&gt;Intake: fenotipo + puntajes + rationale
+    Intake-&gt;&gt;DB: crear Patient / Consultation / SurveyAnswer
+    DB--&gt;&gt;Intake: consulta #N persistida
+    Intake--&gt;&gt;UI: resultado (fenotipo, scores)
+    UI--&gt;&gt;Paciente: tablero con clasificación y recomendaciones
+      </pre>
+    </div>
+  </section>
+
+  <section id="datos">
+    <div class="section-head"><span class="kicker">05</span><h2>Modelo de datos</h2></div>
+    <p class="lede">
+      SQLite + SQLAlchemy en el prototipo, con esquema normalizado y listo
+      para migrar a SQL Server / Microsoft Fabric. Las respuestas del
+      cuestionario y los laboratorios usan un modelo llave-valor (EAV), así
+      el cuestionario evoluciona sin cambiar el esquema.
+    </p>
+    <div class="diagram">
+      <pre class="mermaid">
+erDiagram
+    PATIENT ||--o{ CONSULTATION : tiene
+    CONSULTATION ||--o{ SURVEY_ANSWER : responde
+    CONSULTATION ||--o| MEASUREMENT : mide
+    CONSULTATION ||--o{ LAB_RESULT : analiza
+
+    PATIENT {
+        int id PK
+        string doc_type
+        string doc_number
+        string full_name
+        string sex
+        string birthdate
+    }
+    CONSULTATION {
+        int id PK
+        int patient_id FK
+        int consultation_number
+        string consultation_type
+        datetime consultation_date
+        string phenotype_model
+        string phenotype_final
+        string classification_source
+    }
+    SURVEY_ANSWER {
+        int id PK
+        int consultation_id FK
+        string question_key
+        string answer_value
+    }
+    MEASUREMENT {
+        int id PK
+        int consultation_id FK
+        float weight_kg
+        float height_m
+        float bmi
+        float waist_cm
+        int bp_systolic
+        int bp_diastolic
+    }
+    LAB_RESULT {
+        int id PK
+        int consultation_id FK
+        string test_key
+        float value
+        string unit
+    }
+      </pre>
+    </div>
+    <p class="diagram-caption">
+      La clasificación se guarda dos veces por consulta —
+      <span class="mono">phenotype_model</span> (sugerencia del clasificador) y
+      <span class="mono">phenotype_final</span> (definitivo, editable por el
+      médico) — para mantener trazabilidad entre modelo y criterio clínico.
+    </p>
+  </section>
+
+  <section id="fenix">
+    <div class="section-head"><span class="kicker">06</span><h2>Asistente conversacional — Fénix</h2></div>
+    <p class="lede">
+      Fénix conduce el cuestionario de ingreso en lenguaje natural, con reglas
+      pensadas para que responder sea rápido y sin ambigüedad.
+    </p>
+    <div class="callout">
+      <b>①</b>&nbsp; Presenta las opciones de preguntas <span class="mono">single</span>/<span class="mono">multi</span>
+      siempre numeradas, para responder solo con el número.
+    </div>
+    <div class="callout">
+      <b>②</b>&nbsp; Valida el formato de cada respuesta (opción válida, rango
+      numérico, fecha <span class="mono">AAAA-MM-DD</span>...) antes de
+      guardarla; si no es válida, explica qué formato se espera y repregunta.
+    </div>
+    <div class="callout">
+      <b>③</b>&nbsp; Solo resuelve dudas sobre la <b>pregunta pendiente actual</b> —
+      si la persona pregunta algo ajeno, la redirige amablemente y retoma la
+      pregunta, para mantener el foco.
+    </div>
+    <div class="callout">
+      <b>④</b>&nbsp; Corre sobre <b>Claude Opus 4.8</b> vía <b>Azure AI Foundry</b>
+      (o la API directa de Anthropic); si no hay credenciales configuradas,
+      cae automáticamente al flujo guiado sin IA.
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="section-head"><span class="kicker">07</span><h2>Stack tecnológico</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Capa</th><th>Tecnología</th><th>Rol en el proyecto</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Interfaz</td><td class="mono">Streamlit 1.37</td><td>Vistas de paciente y médico, tablero y formularios.</td></tr>
+          <tr><td>Visualización</td><td class="mono">Plotly</td><td>Gráficas de puntajes, gauge de fenotipo y tendencias.</td></tr>
+          <tr><td>Persistencia</td><td class="mono">SQLAlchemy + SQLite</td><td>ORM y base local; esquema listo para SQL Server / Fabric.</td></tr>
+          <tr><td>IA conversacional</td><td class="mono">anthropic SDK · AnthropicFoundry</td><td>Chat "Fénix" contra Claude Opus 4.8 (Azure AI Foundry o API directa).</td></tr>
+          <tr><td>Configuración</td><td class="mono">python-dotenv · PyYAML</td><td>Variables de entorno (.env) y cuestionario declarativo (YAML).</td></tr>
+          <tr><td>ML offline</td><td class="mono">Databricks · scikit-learn · MLflow</td><td>Clustering exploratorio para el futuro clasificador entrenado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="roadmap">
+    <div class="section-head"><span class="kicker">08</span><h2>Hoja de ruta del clasificador</h2></div>
+    <p class="lede">
+      El clasificador vive detrás de una interfaz estable para poder
+      evolucionar sin tocar la aplicación:
+    </p>
+    <div class="roadmap">
+      <div class="roadmap-item done">
+        <div class="roadmap-num">1</div>
+        <div><h4>Reglas clínicas transparentes <span class="status-tag live">Hoy</span></h4>
+        <p><span class="mono">RuleBasedClassifier</span> pondera síntomas, antropometría, presión y laboratorios en dos ejes (cardiometabólico / digestivo).</p></div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-num">2</div>
+        <div><h4>Exploración de fenotipos emergentes <span class="status-tag next">En curso</span></h4>
+        <p>Notebooks <span class="mono">01→04</span> en <span class="mono">databricks/</span>: ingesta, preprocesamiento, clustering KMeans y perfilamiento sobre el histórico de Comfama.</p></div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-num">3</div>
+        <div><h4>Modelo entrenado conectado <span class="status-tag future">Próximo</span></h4>
+        <p><span class="mono">TrainedClassifier</span> se activa automáticamente al detectar <span class="mono">data/model.pkl</span>, sin cambios en la UI ni la base de datos.</p></div>
+      </div>
+      <div class="roadmap-item">
+        <div class="roadmap-num">4</div>
+        <div><h4>Migración de persistencia <span class="status-tag future">Futuro</span></h4>
+        <p>El esquema normalizado (EAV para respuestas y laboratorios) está pensado para migrar de SQLite a SQL Server / Microsoft Fabric sin rediseño.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="ejecutar">
+    <div class="section-head"><span class="kicker">09</span><h2>Cómo ejecutar</h2></div>
+    <div class="steps">
+      <div class="step"><pre>py -m venv .venv &amp;&amp; .venv\Scripts\activate</pre><p>Entorno virtual (opcional).</p></div>
+      <div class="step"><pre>py -m pip install -r requirements.txt</pre><p>Instala dependencias.</p></div>
+      <div class="step"><pre>copy .env.example .env</pre><p>Completa <span class="mono">ANTHROPIC_API_KEY</span> (+ <span class="mono">ANTHROPIC_FOUNDRY_RESOURCE</span> si usas Azure AI Foundry). Sin esto, corre el flujo guiado sin IA.</p></div>
+      <div class="step"><pre>py scripts/seed_demo.py</pre><p>Pacientes de demostración (opcional).</p></div>
+      <div class="step"><pre>streamlit run app/main.py</pre><p>Abre <span class="mono">http://localhost:8501</span>.</p></div>
+    </div>
+    <p class="diagram-caption" style="margin-top:16px;">
+      Pacientes demo: <span class="mono">CC 1001</span> (Digestivo),
+      <span class="mono">CC 1002</span> (Cardiometabólico) · PIN consola médica:
+      <span class="mono">comfama</span>.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  ⚠️ Prototipo con fines de demostración. Las recomendaciones no reemplazan la
+  valoración médica. El manejo de datos clínicos está sujeto a la autorización
+  del paciente y al marco de habeas data y políticas internas de Comfama.
+  <br/>Fenotipo Médico · Programa de Medicina Funcional, Comfama.
+</footer>

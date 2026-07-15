@@ -27,10 +27,11 @@ def main() -> None:
     )
 
     with st.sidebar:
+        branding.sidebar_brand()
         st.markdown("#### Navegación")
         view = st.radio(
             "Selecciona tu perfil",
-            ["👤 Paciente", "🩺 Médico (administrador)"],
+            ["👤 Paciente", "🩺 Médico"],
             label_visibility="collapsed",
         )
         st.divider()

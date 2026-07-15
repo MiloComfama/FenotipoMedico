@@ -60,6 +60,7 @@ def save_new_consultation(
             session, patient, answers, texts,
             phenotype_model=result.phenotype,
             scores=result.scores,
+            rationale=result.rationale,
         )
         return {
             "consultation_number": consultation.consultation_number,
@@ -83,6 +84,7 @@ def recompute_classification(consultation_id: int) -> ClassificationResult:
         # Solo actualiza el definitivo si aún no lo tocó un médico.
         if consultation.classification_source != "medico":
             consultation.phenotype_final = result.phenotype
+        repo.update_classification_score(session, consultation, result.scores, result.rationale)
         return result
 
 

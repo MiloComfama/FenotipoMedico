@@ -35,6 +35,17 @@ html, body, [class*="css"] {
 .brand-header .brand-title { font-size: 20px; font-weight: 700; margin: 0; }
 .brand-header .brand-sub { font-size: 13px; color: var(--c-muted); margin: 0; }
 
+/* Isotipo FENIX (barra lateral) */
+.sidebar-brand { padding: 6px 2px 16px; }
+.sidebar-brand-row { display: flex; align-items: center; gap: 12px; }
+.sidebar-brand-name {
+  font-size: 24px; font-weight: 800; letter-spacing: 2px;
+  color: var(--c-primary); margin: 0;
+}
+.sidebar-brand-tag {
+  font-size: 11px; color: var(--c-muted); margin: 8px 0 0; line-height: 1.4;
+}
+
 /* Botones */
 .stButton > button, .stFormSubmitButton > button {
   background: var(--c-primary);
@@ -45,7 +56,10 @@ html, body, [class*="css"] {
   font-weight: 600;
   transition: background .15s ease;
 }
-.stButton > button:hover, .stFormSubmitButton > button:hover {
+.stButton > button:hover, .stFormSubmitButton > button:hover,
+.stButton > button:active, .stFormSubmitButton > button:active,
+.stButton > button:focus, .stFormSubmitButton > button:focus,
+.stButton > button:focus:not(:active), .stFormSubmitButton > button:focus:not(:active) {
   background: var(--c-primary-dark);
   color: #fff;
 }
