@@ -9,6 +9,11 @@ __pycache__/
 data/*.db
 data/*.db-journal
 
+# Datos clínicos reales (información sensible / habeas data - NUNCA a git)
+data/*.xlsx
+data/_processed/
+Preguntas y respuestas medico.xlsx
+
 # Streamlit
 .streamlit/secrets.toml
 

@@ -9,3 +9,12 @@ python-dotenv==1.0.1
 pyyaml==6.0.2
 anthropic>=0.90.0
 openpyxl==3.1.5
+
+# Clasificador de fenotipo entrenado (app/domain/ml_model.py)
+scikit-learn>=1.5
+scipy>=1.13
+
+# Solo para reentrenar el modelo / correr los notebooks de databricks/
+# (no son dependencia de la app en producción)
+# matplotlib>=3.8
+# jupyter, nbformat, nbconvert

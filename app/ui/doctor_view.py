@@ -22,12 +22,14 @@ DOCTOR_PIN = "comfama"
 DOCTOR_NAME = "Mario Vélez Correa"
 
 # Laboratorios editables por el médico (EAV). Ampliable en el futuro.
+# (clave, etiqueta, unidad, valor máximo del input, paso del input)
 LAB_FIELDS = [
-    ("colesterol_total", "Colesterol total", "mg/dL"),
-    ("hdl", "HDL", "mg/dL"),
-    ("ldl", "LDL", "mg/dL"),
-    ("trigliceridos", "Triglicéridos", "mg/dL"),
-    ("glicemia", "Glicemia en ayunas", "mg/dL"),
+    ("colesterol_total", "Colesterol total", "mg/dL", 1000.0, 1.0),
+    ("hdl", "HDL", "mg/dL", 1000.0, 1.0),
+    ("ldl", "LDL", "mg/dL", 1000.0, 1.0),
+    ("trigliceridos", "Triglicéridos", "mg/dL", 1000.0, 1.0),
+    ("glicemia", "Glicemia en ayunas", "mg/dL", 1000.0, 1.0),
+    ("hba1c", "HbA1c (%)", "%", 20.0, 0.1),
 ]
 
 MEDICATION_KEY = "medicamentos_actuales"
@@ -51,7 +53,7 @@ def _save_measurement(consultation_id: int, data: dict) -> None:
 def _save_labs(consultation_id: int, labs: dict[str, float | None]) -> None:
     with get_session() as session:
         c = session.get(Consultation, consultation_id)
-        for key, label, unit in LAB_FIELDS:
+        for key, label, unit, _max_value, _step in LAB_FIELDS:
             repo.set_lab_result(session, c, key, label, labs.get(key), unit)
 
 
@@ -182,14 +184,14 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
             default=[v for v in current_medications if v in MEDICATION_OPTIONS],
         )
 
-        st.markdown("**Laboratorios** _(valores en mg/dL)_")
+        st.markdown("**Laboratorios**")
         lab_values = {}
         for row_start in range(0, len(LAB_FIELDS), 3):
             lab_cols = st.columns(3)
-            for col, (key, label, unit) in zip(lab_cols, LAB_FIELDS[row_start:row_start + 3]):
+            for col, (key, label, unit, max_value, step) in zip(lab_cols, LAB_FIELDS[row_start:row_start + 3]):
                 lab_values[key] = col.number_input(
-                    label, 0.0, 1000.0,
-                    float(labs.get(key) or 0), 1.0, key=f"lab_{consultation_id}_{key}",
+                    label, 0.0, max_value,
+                    float(labs.get(key) or 0), step, key=f"lab_{consultation_id}_{key}",
                 ) or None
 
         saved = st.form_submit_button("Guardar datos clínicos", type="primary")
