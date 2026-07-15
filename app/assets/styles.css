@@ -46,6 +46,17 @@ html, body, [class*="css"] {
   font-size: 11px; color: var(--c-muted); margin: 8px 0 0; line-height: 1.4;
 }
 
+/* Selector de perfil (Paciente / Médico) */
+div[data-testid="stRadio"] label {
+  padding: 10px 6px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+}
+div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
+  font-size: 18px;
+  margin: 0;
+}
+
 /* Botones */
 .stButton > button, .stFormSubmitButton > button {
   background: var(--c-primary);

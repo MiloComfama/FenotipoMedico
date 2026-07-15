@@ -28,7 +28,7 @@ def main() -> None:
 
     with st.sidebar:
         branding.sidebar_brand()
-        st.markdown("#### Navegación")
+        st.markdown("#### Modo de ingreso")
         view = st.radio(
             "Selecciona tu perfil",
             ["👤 Paciente", "🩺 Médico"],
