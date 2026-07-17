@@ -138,25 +138,25 @@ def render() -> None:
     if fabric.is_configured():
         applied_key = f"fabric_applied_{consultation_id}"
         auto_fetch = applied_key not in st.session_state
-        refresh = st.button("🔄 Actualizar exámenes desde Fabric", key=f"fabric_btn_{consultation_id}")
+        refresh = st.button("🔄 Actualizar exámenes desde Laboratorio", key=f"fabric_btn_{consultation_id}")
         if auto_fetch or refresh:
-            with st.spinner("Consultando exámenes en Microsoft Fabric..."):
+            with st.spinner("Consultando exámenes en Laboratorio..."):
                 try:
                     fetched = fabric.fetch_lab_results(doc_type, doc_number)
                 except Exception as e:
                     fetched = None
-                    st.warning(f"No se pudo consultar Fabric: {e}")
+                    st.warning(f"No se pudo consultar Laboratorio: {e}")
             st.session_state[applied_key] = True
             if fetched:
                 for key, hit in fetched.items():
                     st.session_state[f"lab_{consultation_id}_{key}"] = hit["value"]
                 st.session_state[f"fabric_meta_{consultation_id}"] = fetched
                 st.success(
-                    f"Se importaron {len(fetched)} resultado(s) de Fabric a los campos de "
-                    "laboratorio de abajo. Revisa y guarda los datos clínicos para conservarlos."
+                    f"Se importaron {len(fetched)} resultados de laboratorio. Verifica la "
+                    "información y guarda los datos clínicos para completar el proceso."
                 )
             elif fetched is not None:
-                st.info(f"No se encontraron exámenes en Fabric para {doc_type} {doc_number}.")
+                st.info(f"No se encontraron exámenes en Laboratorio para {doc_type} {doc_number}.")
 
     tab_data, tab_class, tab_charts = st.tabs(
         ["🩺 Datos clínicos", "🧭 Clasificación", "📊 Gráficas"]
@@ -214,14 +214,16 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
         for row_start in range(0, len(LAB_FIELDS), 3):
             lab_cols = st.columns(3)
             for col, (key, label, unit, max_value, step) in zip(lab_cols, LAB_FIELDS[row_start:row_start + 3]):
+                widget_key = f"lab_{consultation_id}_{key}"
+                if widget_key not in st.session_state:
+                    st.session_state[widget_key] = float(labs.get(key) or 0)
                 lab_values[key] = col.number_input(
-                    label, 0.0, max_value,
-                    float(labs.get(key) or 0), step, key=f"lab_{consultation_id}_{key}",
+                    label, min_value=0.0, max_value=max_value, step=step, key=widget_key,
                 ) or None
                 hit = fabric_meta.get(key)
                 if hit:
                     col.caption(
-                        f"📥 Fabric {hit['date'].strftime('%Y-%m-%d')} · {hit['interpretation']}"
+                        f"📥 Laboratorio {hit['date'].strftime('%Y-%m-%d')} · {hit['interpretation']}"
                     )
 
         saved = st.form_submit_button("Guardar datos clínicos", type="primary")
