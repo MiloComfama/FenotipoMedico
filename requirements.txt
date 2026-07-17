@@ -1,7 +1,7 @@
 # Fenotipo Médico – Segmentación Inteligente de Pacientes (Comfama)
 # Prototipo local
 
-streamlit==1.37.1
+streamlit==1.40.0
 sqlalchemy==2.0.32
 pandas==2.2.2
 plotly==5.23.0
@@ -22,6 +22,10 @@ pyodbc>=5.1
 # Texto a voz (ElevenLabs) para accesibilidad — botón "Escuchar" en el
 # cuestionario.
 requests>=2.31
+
+# Voz a texto (Whisper local, sin API/costo) — botón de micrófono en el
+# cuestionario. Requiere streamlit>=1.38 (st.audio_input).
+faster-whisper>=1.0
 
 # Solo para reentrenar el modelo / correr los notebooks de databricks/
 # (no son dependencia de la app en producción)

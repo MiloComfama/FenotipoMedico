@@ -26,6 +26,11 @@ ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8").strip()
 # en lugar de la API directa de Anthropic). Ej: "mi-recurso-foundry".
 ANTHROPIC_FOUNDRY_RESOURCE = os.getenv("ANTHROPIC_FOUNDRY_RESOURCE", "").strip()
 
+# Tamaño del modelo Whisper local (voz a texto, botón de micrófono en el
+# cuestionario). Corre 100% local, sin costo. Opciones: tiny, base, small,
+# medium, large-v3 (de menor a mayor precisión y tiempo de cómputo).
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small").strip()
+
 # --- Microsoft Fabric: exámenes médicos (ayudas diagnósticas) ---------------
 # Servidor y base de datos no son secretos (son parte de la infraestructura del
 # workspace). La autenticación es Azure AD interactiva (ver app/db/fabric.py):

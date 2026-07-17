@@ -12,7 +12,7 @@ from app.domain.portfolio import get_portfolio_recommendation
 from app.domain.questionnaire import load_questionnaire
 from app.domain.recommendations import get_protocol
 from app.services import intake as intake_service
-from app.services import tts
+from app.services import stt, tts
 from app.services.chat import create_intake, using_llm
 from app.ui import charts
 from app.ui.branding import focus_chat_input, phenotype_badge
@@ -89,6 +89,15 @@ def _start_survey(is_first: bool) -> None:
     st.session_state["pt_stage"] = "survey"
 
 
+def _submit_answer(intake, text: str) -> None:
+    st.session_state["pt_chat"].append({"role": "user", "content": text})
+    turn = intake.handle(text)
+    st.session_state["pt_chat"].append({"role": "assistant", "content": turn.assistant_text})
+    if turn.done:
+        st.session_state["pt_survey_done"] = True
+    st.rerun()
+
+
 def _survey_screen(is_first: bool) -> None:
     st.markdown("### Cuestionario de Medicina Funcional")
     mode = "IA · Opus 4.8" if using_llm() else "modo guiado"
@@ -123,15 +132,42 @@ def _survey_screen(is_first: bool) -> None:
             _finish_survey()
         return
 
-    user_text = st.chat_input("Escribe tu respuesta…")
+    col_input, col_mic = st.columns([6, 1])
+    with col_input:
+        user_text = st.chat_input("Escribe tu respuesta…")
+
+    voice_text = None
+    voice_error = None
+    with col_mic:
+        if stt.is_configured():
+            with st.popover("🎤"):
+                audio_value = st.audio_input(
+                    "Grábate y vuelve a dar clic para detener", key="pt_voice_input"
+                )
+                if audio_value is not None:
+                    audio_bytes = audio_value.getvalue()
+                    audio_hash = hash(audio_bytes)
+                    if audio_hash != st.session_state.get("pt_last_voice_hash"):
+                        st.session_state["pt_last_voice_hash"] = audio_hash
+                        with st.spinner("Transcribiendo tu respuesta…"):
+                            try:
+                                voice_text = stt.transcribe(audio_bytes)
+                                if not voice_text:
+                                    voice_error = (
+                                        "No detecté voz en la grabación. Intenta de nuevo, "
+                                        "hablando cerca del micrófono."
+                                    )
+                            except Exception as e:
+                                voice_error = f"No se pudo transcribir el audio: {e}"
+
+    if voice_error:
+        st.error(voice_error)
+
     focus_chat_input()
     if user_text:
-        st.session_state["pt_chat"].append({"role": "user", "content": user_text})
-        turn = intake.handle(user_text)
-        st.session_state["pt_chat"].append({"role": "assistant", "content": turn.assistant_text})
-        if turn.done:
-            st.session_state["pt_survey_done"] = True
-        st.rerun()
+        _submit_answer(intake, user_text)
+    elif voice_text:
+        _submit_answer(intake, voice_text)
 
 
 def _finish_survey() -> None:
