@@ -19,6 +19,10 @@ scipy>=1.13
 # operativo (no se instala vía pip).
 pyodbc>=5.1
 
+# Texto a voz (ElevenLabs) para accesibilidad — botón "Escuchar" en el
+# cuestionario.
+requests>=2.31
+
 # Solo para reentrenar el modelo / correr los notebooks de databricks/
 # (no son dependencia de la app en producción)
 # matplotlib>=3.8

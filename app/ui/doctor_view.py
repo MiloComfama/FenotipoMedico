@@ -10,6 +10,7 @@ from app.db import fabric
 from app.db import repository as repo
 from app.db.database import get_session
 from app.db.models import Consultation
+from app.domain.portfolio import get_portfolio_recommendation
 from app.domain.recommendations import get_protocol
 from app.services import intake as intake_service
 from app.ui import charts
@@ -271,6 +272,14 @@ def _classification_panel(consultation_id: int, current_phenotype: str, rows, n:
             st.write(protocol.summary)
             for item in protocol.focus_areas:
                 st.markdown(f"- {item}")
+            portfolio = get_portfolio_recommendation(row["phenotype"])
+            if portfolio:
+                st.markdown("**Servicios del portafolio Comfama**")
+                for name, desc in portfolio.programs:
+                    st.markdown(f"- **{name}**" + (f" — {desc}" if desc else ""))
+                st.markdown(
+                    "🔗 [Conoce e ingresa a los servicios de Comfama](https://www.comfama.com)"
+                )
 
 
 def _charts_panel(rows) -> None:

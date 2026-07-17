@@ -14,6 +14,11 @@ data/*.xlsx
 data/_processed/
 Preguntas y respuestas medico.xlsx
 
+# Excepción: no es dato clínico de paciente, es contenido de negocio
+# (mapeo cluster -> programas del portafolio) que la app necesita para
+# funcionar (ver app/domain/portfolio.py).
+!data/recomendacion_clusters_portafolio.xlsx
+
 # Streamlit
 .streamlit/secrets.toml
 

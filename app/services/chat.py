@@ -219,6 +219,18 @@ def _first_int(text: str) -> int | None:
     return None
 
 
+_STRAY_TAG_PATTERN = re.compile(r"</?[a-zA-Z_][\w:-]*\s*/?>")
+
+
+def _strip_stray_tags(text: str) -> str:
+    """Elimina etiquetas tipo HTML/XML sueltas (p. ej. ``<user>``) que a veces
+    aparecen en la respuesta cruda del modelo. Sin esto, el navegador oculta
+    la etiqueta pero deja visible el texto interior pegado al resto del
+    mensaje (ej. "...responde **Sí** o **No**. 😊\\n\\nusersi"), que es
+    confuso para quien lee el chat."""
+    return _STRAY_TAG_PATTERN.sub("", text)
+
+
 _DOUBT_PATTERN = re.compile(
     r"\?|no entiendo|no comprendo|no s[eé] q|qu[eé] (es|significa)|"
     r"que (es|significa)|c[oó]mo (respondo|lleno|contesto)|ay[uú]dame|ayuda|"
@@ -320,16 +332,32 @@ VALIDACIÓN DE FORMATO (muy importante):
   NO llames a `guardar_respuesta`. En su lugar, explica en una frase breve y
   amable qué información falta (con un ejemplo si ayuda) y vuelve a formular
   la MISMA pregunta pendiente.
-- Si la persona expresa una duda sobre la pregunta actual (pregunta qué significa
-  algo de ESA pregunta, pide ayuda para responderla, parece confundida, o su
-  mensaje no es una respuesta sino una pregunta relacionada con ella), acláraselo
-  con una explicación breve y un ejemplo si aplica, y luego repite la pregunta
-  pendiente (con sus opciones numeradas si aplica) SIN marcarla como respondida.
 - Cuando la persona responda correctamente, registra su respuesta con la
   herramienta `guardar_respuesta` usando el 'key' exacto.
 - Solo pregunta por los ítems aplicables; respeta las dependencias (depends_on).
 - Cuando ya tengas TODAS las respuestas aplicables, llama a `finalizar` con un
   mensaje de cierre amable.
+
+REGLA CRÍTICA — DUDAS SOBRE LA PREGUNTA ACTUAL (léela dos veces):
+Si el mensaje de la persona NO es una respuesta a la pregunta pendiente sino
+una duda/pregunta sobre ella (qué significa, cómo responderla, ejemplos,
+parece confundida), tu turno completo debe consistir ÚNICAMENTE en: (1) una
+aclaración breve, y (2) repetir la MISMA pregunta pendiente (con sus opciones
+numeradas si aplica). En ese turno tienes PROHIBIDO:
+  · Llamar a `guardar_respuesta` (la pregunta actual sigue SIN responder).
+  · Llamar a `finalizar`.
+  · Mencionar, adelantar o formular cualquier pregunta distinta a la actual.
+Nunca avances a la siguiente pregunta hasta que la persona conteste
+efectivamente la pregunta pendiente — aclarar una duda no cuenta como
+respuesta.
+
+Ejemplo de lo que NO debes hacer:
+  Pregunta pendiente: "¿Realiza actividad física?"
+  Persona: "¿eso incluye caminar al trabajo?"
+  ❌ Incorrecto: "Sí, cuenta. Por cierto, ya registré tu actividad. Ahora,
+     ¿duerme bien en la noche?" (avanzó sin que la persona respondiera)
+  ✅ Correcto: "Sí, caminar cuenta como actividad física. ¿Realiza actividad
+     física? (Sí/No)"
 
 CUESTIONARIO (formato JSON):
 {schema}
@@ -451,7 +479,8 @@ class LLMIntake(BaseIntake):
                 continue  # el modelo aún no ha formulado la siguiente pregunta; démosle un turno más
             break  # sin herramientas: el modelo ya respondió con texto
 
-        return "\n\n".join(p for p in assistant_text_parts if p.strip()).strip() or "…"
+        joined = "\n\n".join(p for p in assistant_text_parts if p.strip()).strip()
+        return _strip_stray_tags(joined) or "…"
 
     def _apply_tool(self, name: str, payload: dict[str, Any]) -> str:
         if name == "guardar_respuesta":

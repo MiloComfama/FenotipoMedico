@@ -37,6 +37,10 @@ FABRIC_SQL_SCHEMA = "Hackaton2026"
 FABRIC_SQL_TABLE = "ResultadosAyudasDiagnosticas"
 FABRIC_SQL_USER = os.getenv("FABRIC_SQL_USER", "").strip()
 
+# --- ElevenLabs: texto a voz (accesibilidad) --------------------------------
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "").strip()
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
+
 # --- Reglas de negocio ------------------------------------------------------
 # Tiempo mínimo entre consultas (cita de seguimiento).
 FOLLOW_UP_DAYS = 30

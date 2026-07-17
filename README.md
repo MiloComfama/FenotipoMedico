@@ -264,6 +264,7 @@ py -m pip install -r requirements.txt
 copy .env.example .env
 # - ANTHROPIC_API_KEY (+ ANTHROPIC_FOUNDRY_RESOURCE si usas Azure AI Foundry): chat con IA
 # - FABRIC_SQL_USER: consulta de exámenes médicos en Microsoft Fabric desde la consola médica
+# - ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID: botón "Escuchar" (texto a voz) en el cuestionario
 
 # 4. datos de demostración (opcional)
 py scripts/seed_demo.py
@@ -283,3 +284,8 @@ Abrir http://localhost:8501
   campos de laboratorio (revisar y guardar sigue siendo manual). Requiere
   `FABRIC_SQL_USER` en `.env`; la primera consulta pide login interactivo de
   Azure AD (la cuenta del workspace tiene MFA, por eso no usa contraseña).
+- **Accesibilidad (texto a voz)**: en el cuestionario, cada mensaje de Fénix
+  tiene un botón "🔊 Escuchar" que lee la pregunta en voz alta (ElevenLabs),
+  pensado para personas con baja visión o dificultades de lectura. Requiere
+  `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID` en `.env`; si no están, el
+  botón simplemente no aparece.

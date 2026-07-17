@@ -106,6 +106,10 @@ div[data-testid="stRadio"] [data-testid="stMarkdownContainer"] p {
   color: var(--c-primary-dark);
 }
 
+/* Texto a voz (accesibilidad): el audio se reproduce automáticamente al dar
+   clic en "Escuchar"; se oculta el reproductor visual, no la reproducción. */
+[data-testid="stAudio"] { display: none; }
+
 /* Métricas */
 [data-testid="stMetricValue"] { color: var(--c-primary-dark); }
 

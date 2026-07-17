@@ -8,9 +8,11 @@ import streamlit as st
 
 from app.config import ASSETS_DIR, FOLLOW_UP_DAYS
 from app.db import repository as repo
+from app.domain.portfolio import get_portfolio_recommendation
 from app.domain.questionnaire import load_questionnaire
 from app.domain.recommendations import get_protocol
 from app.services import intake as intake_service
+from app.services import tts
 from app.services.chat import create_intake, using_llm
 from app.ui import charts
 from app.ui.branding import focus_chat_input, phenotype_badge
@@ -97,10 +99,23 @@ def _survey_screen(is_first: bool) -> None:
     if total:
         st.progress(min(done / total, 1.0), text=f"Avance: {done}/{total}")
 
-    for msg in st.session_state["pt_chat"]:
+    just_generated_idx = st.session_state.pop("pt_tts_just_generated", None)
+    for i, msg in enumerate(st.session_state["pt_chat"]):
         avatar = "🧑" if msg["role"] == "user" else FENIX_AVATAR
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
+            if msg["role"] == "assistant" and tts.is_configured():
+                audio_key = f"pt_tts_audio_{i}"
+                if st.button("🔊 Escuchar", key=f"pt_tts_btn_{i}"):
+                    with st.spinner("Generando audio…"):
+                        try:
+                            st.session_state[audio_key] = tts.synthesize(msg["content"])
+                            just_generated_idx = i
+                        except Exception as e:
+                            st.error(f"No se pudo generar el audio: {e}")
+                audio_bytes = st.session_state.get(audio_key)
+                if audio_bytes:
+                    st.audio(audio_bytes, format="audio/mp3", autoplay=(i == just_generated_idx))
 
     if st.session_state.get("pt_survey_done"):
         st.success("Cuestionario completado. Generando tu clasificación…")
@@ -199,7 +214,17 @@ def _dashboard_screen(patient) -> None:
             st.markdown("**Qué monitorearemos**")
             for item in protocol.monitoring:
                 st.markdown(f"- {item}")
+
+            portfolio = get_portfolio_recommendation(phenotype)
+            if portfolio:
+                st.markdown("**Servicios del portafolio Comfama para ti**")
+                for name, desc in portfolio.programs:
+                    st.markdown(f"- **{name}**" + (f" — {desc}" if desc else ""))
+
             st.caption("ℹ️ " + protocol.disclaimer)
+            st.markdown(
+                "🔗 [Conoce e ingresa a los servicios de Comfama](https://www.comfama.com)"
+            )
 
     # Evolución (si hay más de una consulta)
     if len(rows) > 1:
