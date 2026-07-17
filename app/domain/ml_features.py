@@ -14,24 +14,19 @@ FEATURE_NAMES = [
     "colesterol_total", "colesterol_hdl", "hba1c",
     "usa_hipoglicemiante", "usa_hipolipemiante",
     "n_sintomas_gi", "usa_antiacido_ibp",
+]
+# Nota: se probó un clustering conjunto incluyendo también las señales de
+# estilo de vida (estrés, ansiedad, actividad física, hábitos alimentarios;
+# ver databricks/03_entrenamiento_clustering.ipynb) pero la silueta resultante era
+# peor (~0.16 vs ~0.19 aquí) y los clusters mezclaban rasgos psicosociales
+# frecuentes en toda la población con marcadores clínicos poco frecuentes,
+# diluyendo la interpretación clínica. Las señales de estilo de vida se usan
+# igual para las explicaciones (rationale) pero no para definir el fenotipo.
+LIFESTYLE_FEATURES = [
     "estres_alto_bin", "ansioso_bin", "nervioso_bin", "tecnica_estres_bin",
     "hace_actividad", "actividad_fuerza", "frecuencia_actividad_num",
     "n_habitos_saludables",
 ]
-
-# Subconjuntos usados para calcular la afinidad a cada eje clínico.
-CARDIO_FEATURES = [
-    "imc", "perimetro_abdominal", "pa_sistolica", "pa_diastolica",
-    "colesterol_total", "colesterol_hdl", "hba1c",
-    "usa_hipoglicemiante", "usa_hipolipemiante",
-]
-# Nota: 'estres_alto_bin'/'tecnica_estres_bin' se probaron aquí también (están
-# correlacionadas con síntomas digestivos a nivel poblacional, ver EDA en
-# databricks/03_entrenamiento_clustering.ipynb), pero al ser binarias con baja
-# prevalencia dominaban la distancia RMS de solo 4 dimensiones y producían
-# falsos "Digestivo" en pacientes estresados sin ningún síntoma gastrointestinal.
-# Se dejan fuera del eje de puntaje (sí se usan en el clustering conjunto).
-DIGEST_FEATURES = ["n_sintomas_gi", "usa_antiacido_ibp"]
 
 _FREQ_MAP_APP = {
     "1 a 2 días": 1.5,

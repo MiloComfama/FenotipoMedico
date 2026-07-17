@@ -4,35 +4,31 @@ el modelo en ``data/model.pkl``.
 Uso:  py scripts/train_model.py
 
 Fuente de datos: ``data/HISTORICO_MF_HACKATON2026 (1).xlsx`` (hoja "Datos").
-El proceso completo (EDA, justificación de las categorías y perfilamiento de
+El proceso completo (EDA, búsqueda de features/k y perfilamiento de
 clusters) está documentado en los notebooks de ``databricks/``; este script
 es la versión ejecutable y reproducible de la etapa de entrenamiento.
 
-Enfoque de modelado (resumen):
+Enfoque de modelado (resumen; ver notebooks 03 y 04 para el detalle):
   1. Se homologan y limpian las columnas del Excel (decimales con coma,
-     valores fisiológicamente imposibles) y se derivan features numéricas y
-     binarias (mismas que usa la app en tiempo real, ver
-     ``app/domain/ml_features.py``).
-  2. Un K-Means conjunto (k=3) sobre las 19 features revela los 3 segmentos
-     naturales de la población: uno con síntomas gastrointestinales
-     elevados ("Digestivo"), uno con marcadores cardiometabólicos elevados
-     ("Cardiometabólico") y uno de bajo riesgo/sin síntomas predominantes.
-     Este clustering conjunto es la respuesta al EDA solicitado y queda
-     documentado (silueta, tamaños, perfiles) en el notebook 03.
-  3. Para la clasificación de cada consulta se usan DOS K-Means auxiliares
-     de k=2, cada uno entrenado solo con las features relevantes a un eje
-     clínico (cardiometabólico / digestivo). Esto separa mucho mejor cada
-     eje que extraer la afinidad del clustering conjunto de 19 dimensiones
-     (silueta 0.32 y 0.68 respectivamente, frente a 0.14 del conjunto).
-  4. La afinidad de un paciente a cada eje es 1 menos su percentil de
-     distancia al centroide "de riesgo" de ese eje (calculado contra la
-     distribución de distancias del histórico). Si ambas afinidades caen en
-     el cuartil superior (>= percentil 75) de su propio eje, se asigna
-     "Mixto"; si no, gana el eje con mayor percentil. Esta lógica reemplaza
-     los pesos y umbrales manuales del clasificador de reglas por valores
-     aprendidos de los datos, conservando la misma idea (dos puntajes
-     continuos + una regla de decisión) para no romper la interfaz
-     ``Classifier`` ni la UI existente.
+     valores fisiológicamente imposibles) y se derivan las features
+     numéricas y binarias que usa la app en tiempo real (ver
+     ``app/domain/ml_features.FEATURE_NAMES``).
+  2. Se probaron varios subconjuntos de features (todas, solo estilo de
+     vida, solo clínicas, clínicas + síntomas GI) y k de 2 a 9. El mejor
+     compromiso silueta/interpretabilidad NO es el clustering conjunto de
+     19 dimensiones usado anteriormente (silueta ~0.14-0.16), sino un
+     K-Means (k=5) sobre las 11 features clínicas + síntomas digestivos
+     (silueta ~0.19), que además separa el antiguo cluster
+     "Cardiometabólico" en tres fenotipos clínicamente distintos:
+     Obesidad, Dislipidemia y Glicemia — cada uno con una vía de
+     intervención distinta. "Bajo riesgo" y "Digestivo" se mantienen como
+     clusters propios (ver notebook 03 para la comparación completa).
+  3. La afinidad de un paciente a cada fenotipo es 1 menos su percentil de
+     distancia al centroide de ese cluster (calculado contra la
+     distribución de distancias del histórico); el fenotipo final es el de
+     mayor afinidad. Esto reemplaza la combinación "dos ejes + regla Mixto"
+     del modelo anterior por una asignación directa al vecino más cercano,
+     ahora que hay clusters propios para cada perfil clínico relevante.
 """
 from __future__ import annotations
 
@@ -49,7 +45,7 @@ from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.domain.ml_features import CARDIO_FEATURES, DIGEST_FEATURES, FEATURE_NAMES  # noqa: E402
+from app.domain.ml_features import FEATURE_NAMES  # noqa: E402
 
 SRC_PATH = Path(__file__).resolve().parent.parent / "data" / "HISTORICO_MF_HACKATON2026 (1).xlsx"
 MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "model.pkl"
@@ -62,7 +58,7 @@ RAW_COLUMNS = [
     "colesterol_total", "colesterol_hdl", "hba1c",
 ]
 
-MIXTO_PERCENTILE = 0.75  # umbral (cuartil superior) para considerar un eje "elevado"
+N_CLUSTERS = 5
 RANDOM_STATE = 42
 
 
@@ -81,15 +77,21 @@ def load_and_engineer() -> pd.DataFrame:
     df.columns = RAW_COLUMNS
 
     df["perimetro_abdominal"] = _to_float_co(df["perimetro_abdominal"])
+    df["peso"] = _to_float_co(df["peso"])
+    df["talla"] = _to_float_co(df["talla"])
     df["pa_diastolica"] = _to_float_co(df["pa_diastolica"])
 
     # Descarta registros fisiológicamente imposibles (típico de captura manual).
     mask_valid = (
         df["imc"].between(10, 70)
-        & df["perimetro_abdominal"].between(40, 180)
-        & df["pa_sistolica"].between(70, 220)
-        & df["pa_diastolica"].between(40, 150)
-        & df["hba1c"].between(3, 16)
+        & df["talla"].between(1.0, 2.2)
+        & df["peso"].between(25, 250)
+        & df["perimetro_abdominal"].between(40, 200)
+        & df["pa_sistolica"].between(60, 250)
+        & df["pa_diastolica"].between(30, 150)
+        & df["colesterol_total"].between(50, 500)
+        & df["colesterol_hdl"].between(10, 150)
+        & df["hba1c"].between(3.5, 20)
     )
     n_before = len(df)
     df = df[mask_valid].reset_index(drop=True)
@@ -105,10 +107,10 @@ def load_and_engineer() -> pd.DataFrame:
     df["frecuencia_actividad_num"] = (
         df["actividad_frecuencia"].str.strip().str.lower().str.rstrip(";").map(freq_map).fillna(0)
     )
-    df["estres_alto_bin"] = (df["estres_alto"].str.strip().str.lower() == "sí").astype(int)
-    df["ansioso_bin"] = (df["ansioso"].str.strip().str.lower() == "sí").astype(int)
-    df["nervioso_bin"] = (df["nervioso"].str.strip().str.lower() == "sí").astype(int)
-    df["tecnica_estres_bin"] = (df["tecnica_estres"].str.strip().str.lower() == "sí").astype(int)
+    df["estres_alto_bin"] = (df["estres_alto"].str.strip().str.upper() == "SÍ").astype(int)
+    df["ansioso_bin"] = (df["ansioso"].str.strip().str.upper() == "SÍ").astype(int)
+    df["nervioso_bin"] = (df["nervioso"].str.strip().str.upper() == "SÍ").astype(int)
+    df["tecnica_estres_bin"] = (df["tecnica_estres"].str.strip().str.upper() == "SÍ").astype(int)
     df["usa_hipoglicemiante"] = df["medicamentos"].apply(lambda t: int(_has_any(t, ["hipoglicemiante"])))
     df["usa_hipolipemiante"] = df["medicamentos"].apply(lambda t: int(_has_any(t, ["hipolipemiante"])))
     df["usa_antiacido_ibp"] = df["medicamentos"].apply(
@@ -120,6 +122,35 @@ def load_and_engineer() -> pd.DataFrame:
     return df
 
 
+def _label_clusters(df: pd.DataFrame, labels: np.ndarray) -> dict[int, str]:
+    """Asigna un nombre clínico a cada cluster a partir de su perfil
+    (medicamento/marcador dominante), en vez de fijar el índice numérico de
+    KMeans (arbitrario y dependiente de la semilla)."""
+    profile = df.assign(cluster=labels).groupby("cluster")[FEATURE_NAMES].mean()
+    remaining = list(profile.index)
+    mapping: dict[int, str] = {}
+
+    digestivo = profile.loc[remaining, "n_sintomas_gi"].idxmax()
+    mapping[digestivo] = "Digestivo"
+    remaining.remove(digestivo)
+
+    glicemia = profile.loc[remaining, "usa_hipoglicemiante"].idxmax()
+    mapping[glicemia] = "Glicemia"
+    remaining.remove(glicemia)
+
+    dislipidemia = profile.loc[remaining, "usa_hipolipemiante"].idxmax()
+    mapping[dislipidemia] = "Dislipidemia"
+    remaining.remove(dislipidemia)
+
+    obesidad = profile.loc[remaining, "imc"].idxmax()
+    mapping[obesidad] = "Obesidad"
+    remaining.remove(obesidad)
+
+    assert len(remaining) == 1, f"Sobraron clusters sin etiquetar: {remaining}"
+    mapping[remaining[0]] = "Bajo riesgo"
+    return mapping
+
+
 def main() -> None:
     df = load_and_engineer()
     X = df[FEATURE_NAMES].copy()
@@ -128,69 +159,35 @@ def main() -> None:
 
     scaler = StandardScaler()
     Xs = scaler.fit_transform(X)
-    Xs_df = pd.DataFrame(Xs, columns=FEATURE_NAMES)
 
-    # --- 1) Clustering conjunto (k=3): EDA / segmentación poblacional -------
-    print("\n=== Clustering conjunto k=3 (segmentación de la población) ===")
-    km_joint = KMeans(n_clusters=3, random_state=RANDOM_STATE, n_init=10)
-    joint_labels = km_joint.fit_predict(Xs)
-    sil_joint = silhouette_score(Xs, joint_labels, sample_size=5000, random_state=RANDOM_STATE)
-    sizes = pd.Series(joint_labels).value_counts().sort_index()
-    print(f"silueta: {sil_joint:.4f} | tamaños de cluster: {sizes.to_dict()}")
-    profile = df.assign(cluster=joint_labels).groupby("cluster")[FEATURE_NAMES].mean().round(2)
-    print(profile.T)
+    km = KMeans(n_clusters=N_CLUSTERS, random_state=RANDOM_STATE, n_init=10).fit(Xs)
+    sil = silhouette_score(Xs, km.labels_, sample_size=6000, random_state=RANDOM_STATE)
+    sizes = pd.Series(km.labels_).value_counts().sort_index()
+    print(f"\n=== K-Means k={N_CLUSTERS} sobre features clínicas + GI ===")
+    print(f"silueta: {sil:.4f} | tamaños de cluster: {sizes.to_dict()}")
 
-    # --- 2) Sub-clusters por eje (k=2 cada uno): motor de clasificación -----
-    Xc = Xs_df[CARDIO_FEATURES].values
-    Xd = Xs_df[DIGEST_FEATURES].values
-    km_cardio = KMeans(n_clusters=2, random_state=RANDOM_STATE, n_init=10).fit(Xc)
-    km_digest = KMeans(n_clusters=2, random_state=RANDOM_STATE, n_init=10).fit(Xd)
-    sil_cardio = silhouette_score(Xc, km_cardio.labels_, sample_size=5000, random_state=RANDOM_STATE)
-    sil_digest = silhouette_score(Xd, km_digest.labels_, sample_size=5000, random_state=RANDOM_STATE)
-    print(f"\nsilueta cardio (k=2): {sil_cardio:.4f} | silueta digestivo (k=2): {sil_digest:.4f}")
+    cluster_to_phenotype = _label_clusters(df, km.labels_)
+    print("\nMapeo cluster -> fenotipo:", cluster_to_phenotype)
 
-    hi_cardio_cluster = int(df.groupby(km_cardio.labels_)["hba1c"].mean().idxmax())
-    hi_digest_cluster = int(df.groupby(km_digest.labels_)["n_sintomas_gi"].mean().idxmax())
-
-    dist_cardio = np.linalg.norm(Xc - km_cardio.cluster_centers_[hi_cardio_cluster], axis=1)
-    dist_digest = np.linalg.norm(Xd - km_digest.cluster_centers_[hi_digest_cluster], axis=1)
-
-    pct_cardio = 1 - (rankdata(dist_cardio) / len(dist_cardio))
-    pct_digest = 1 - (rankdata(dist_digest) / len(dist_digest))
-    # OJO: el umbral es el percentil MIXTO_PERCENTILE en sí mismo (pct_cardio/
-    # pct_digest ya son percentiles por construcción). Volver a calcular
-    # np.percentile(pct_digest, 75) es incorrecto cuando hay muchos empates
-    # (p. ej. la mayoría sin síntomas digestivos): el percentil 75 de una
-    # distribución con >75% de valores empatados en el mínimo colapsa al
-    # valor empatado en vez de reflejar el cuartil superior real.
-    thr_cardio = MIXTO_PERCENTILE
-    thr_digest = MIXTO_PERCENTILE
-
-    final_label = np.where(
-        (pct_cardio >= thr_cardio) & (pct_digest >= thr_digest), "Mixto",
-        np.where(pct_cardio >= pct_digest, "Cardiometabólico", "Digestivo"),
-    )
+    phenotype_labels = pd.Series(km.labels_).map(cluster_to_phenotype)
     print("\n=== Distribución final de fenotipos (todo el histórico) ===")
-    print(pd.Series(final_label).value_counts())
+    print(phenotype_labels.value_counts())
     print("\nPerfil clínico promedio por fenotipo asignado:")
-    print(df.assign(fen=final_label).groupby("fen")[FEATURE_NAMES].mean().round(2).T)
+    print(df.assign(fen=phenotype_labels.values).groupby("fen")[FEATURE_NAMES].mean().round(2).T)
+
+    dist_train = {}
+    for cluster_idx, phenotype in cluster_to_phenotype.items():
+        dist_train[phenotype] = np.linalg.norm(Xs - km.cluster_centers_[cluster_idx], axis=1)
 
     bundle = {
-        "version": 2,
+        "version": 3,
         "feature_names": FEATURE_NAMES,
-        "cardio_features": CARDIO_FEATURES,
-        "digest_features": DIGEST_FEATURES,
         "medians": medians.to_dict(),
         "scaler": scaler,
-        "km_cardio": km_cardio,
-        "km_digest": km_digest,
-        "hi_cardio_cluster": hi_cardio_cluster,
-        "hi_digest_cluster": hi_digest_cluster,
-        "dist_cardio_train": dist_cardio,
-        "dist_digest_train": dist_digest,
-        "mixto_percentile": MIXTO_PERCENTILE,
-        "joint_kmeans": km_joint,
-        "joint_silhouette": sil_joint,
+        "kmeans": km,
+        "cluster_to_phenotype": cluster_to_phenotype,
+        "dist_train": dist_train,
+        "silhouette": sil,
     }
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(MODEL_PATH, "wb") as fh:

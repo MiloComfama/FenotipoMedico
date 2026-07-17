@@ -14,6 +14,11 @@ openpyxl==3.1.5
 scikit-learn>=1.5
 scipy>=1.13
 
+# Consulta de exámenes médicos en Microsoft Fabric (consola médica).
+# Requiere el "ODBC Driver 18 for SQL Server" instalado a nivel de sistema
+# operativo (no se instala vía pip).
+pyodbc>=5.1
+
 # Solo para reentrenar el modelo / correr los notebooks de databricks/
 # (no son dependencia de la app en producción)
 # matplotlib>=3.8

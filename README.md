@@ -1,8 +1,8 @@
 # Fenotipo Médico · Segmentación Inteligente de Pacientes (Comfama)
 
 Prototipo del programa de **Medicina Funcional de Comfama** que segmenta
-pacientes por fenotipo clínico (**Cardiometabólico · Digestivo · Mixto**)
-integrando hábitos de vida y datos clínicos.
+pacientes por fenotipo clínico (**Obesidad · Dislipidemia · Glicemia ·
+Digestivo · Bajo riesgo**) integrando hábitos de vida y datos clínicos.
 
 > ⚠️ Prototipo con fines de demostración. Las recomendaciones no reemplazan la
 > valoración médica. El manejo de datos clínicos está sujeto a la autorización
@@ -260,9 +260,10 @@ py -m venv .venv && .venv\Scripts\activate
 # 2. dependencias
 py -m pip install -r requirements.txt
 
-# 3. clave de IA para el chat (opcional; sin ella se usa el flujo guiado)
+# 3. claves/credenciales (opcional; sin ellas se usan los flujos de respaldo)
 copy .env.example .env
-# completa ANTHROPIC_API_KEY (+ ANTHROPIC_FOUNDRY_RESOURCE si usas Azure AI Foundry)
+# - ANTHROPIC_API_KEY (+ ANTHROPIC_FOUNDRY_RESOURCE si usas Azure AI Foundry): chat con IA
+# - FABRIC_SQL_USER: consulta de exámenes médicos en Microsoft Fabric desde la consola médica
 
 # 4. datos de demostración (opcional)
 py scripts/seed_demo.py
@@ -273,5 +274,12 @@ streamlit run app/main.py
 
 Abrir http://localhost:8501
 
-- **Pacientes demo**: `CC 1001` (Digestivo), `CC 1002` (Cardiometabólico).
+- **Pacientes demo**: `CC 1001` (Digestivo), `CC 1002` (Glicemia).
 - **PIN consola médica**: `comfama`.
+- **Exámenes médicos (Fabric)**: en la consola médica, tras buscar un paciente,
+  el botón "🔬 Consultar exámenes en sistema central (Fabric)" trae el
+  resultado más reciente de cada laboratorio desde
+  `LH_FabricData.Hackaton2026.ResultadosAyudasDiagnosticas` y prellena los
+  campos de laboratorio (revisar y guardar sigue siendo manual). Requiere
+  `FABRIC_SQL_USER` en `.env`; la primera consulta pide login interactivo de
+  Azure AD (la cuenta del workspace tiene MFA, por eso no usa contraseña).

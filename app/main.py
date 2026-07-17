@@ -37,7 +37,7 @@ def main() -> None:
         st.divider()
         st.caption(
             "Prototipo de segmentación por fenotipo clínico "
-            "(Cardiometabólico · Digestivo · Mixto)."
+            "(Obesidad · Dislipidemia · Glicemia · Digestivo · Bajo riesgo)."
         )
         st.caption(
             "Uso sujeto a autorización del paciente y al marco de habeas data "

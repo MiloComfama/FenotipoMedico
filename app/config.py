@@ -26,6 +26,17 @@ ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-opus-4-8").strip()
 # en lugar de la API directa de Anthropic). Ej: "mi-recurso-foundry".
 ANTHROPIC_FOUNDRY_RESOURCE = os.getenv("ANTHROPIC_FOUNDRY_RESOURCE", "").strip()
 
+# --- Microsoft Fabric: exámenes médicos (ayudas diagnósticas) ---------------
+# Servidor y base de datos no son secretos (son parte de la infraestructura del
+# workspace). La autenticación es Azure AD interactiva (ver app/db/fabric.py):
+# la cuenta del workspace tiene MFA/acceso condicional, que bloquea el flujo
+# usuario+contraseña directo, así que no hay contraseña que guardar aquí.
+FABRIC_SQL_SERVER = "jjwf2sltqteerjqzaniw7wlnr4-sv3xtungb5sedk5j5ptldf3o5m.datawarehouse.fabric.microsoft.com"
+FABRIC_SQL_DATABASE = "LH_FabricData"
+FABRIC_SQL_SCHEMA = "Hackaton2026"
+FABRIC_SQL_TABLE = "ResultadosAyudasDiagnosticas"
+FABRIC_SQL_USER = os.getenv("FABRIC_SQL_USER", "").strip()
+
 # --- Reglas de negocio ------------------------------------------------------
 # Tiempo mínimo entre consultas (cita de seguimiento).
 FOLLOW_UP_DAYS = 30
@@ -48,10 +59,17 @@ BRAND = {
 }
 
 # Colores por fenotipo clínico (para gráficas y badges).
+# 5 fenotipos derivados del clustering sobre el histórico real (ver
+# databricks/03_entrenamiento_clustering.ipynb): el antiguo cluster único
+# "Cardiometabólico" se separa en tres perfiles con vías de intervención
+# distintas (Obesidad, Dislipidemia, Glicemia); "Digestivo" y "Bajo riesgo"
+# se mantienen como clusters propios.
 PHENOTYPE_COLORS = {
-    "Cardiometabólico": "#E0334C",
+    "Obesidad": "#E0334C",
+    "Dislipidemia": "#E9A23B",
+    "Glicemia": "#7B4F9E",
     "Digestivo": "#1FA97B",
-    "Mixto": "#7B4F9E",
+    "Bajo riesgo": "#3B6FB0",
 }
 
 PHENOTYPES = list(PHENOTYPE_COLORS.keys())

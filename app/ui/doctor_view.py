@@ -6,6 +6,7 @@ import json
 import streamlit as st
 
 from app.config import PHENOTYPES
+from app.db import fabric
 from app.db import repository as repo
 from app.db.database import get_session
 from app.db.models import Consultation
@@ -134,6 +135,29 @@ def render() -> None:
     )
     consultation_id = _consultation_id_for(patient, sel_n)
 
+    if fabric.is_configured():
+        applied_key = f"fabric_applied_{consultation_id}"
+        auto_fetch = applied_key not in st.session_state
+        refresh = st.button("🔄 Actualizar exámenes desde Fabric", key=f"fabric_btn_{consultation_id}")
+        if auto_fetch or refresh:
+            with st.spinner("Consultando exámenes en Microsoft Fabric..."):
+                try:
+                    fetched = fabric.fetch_lab_results(doc_type, doc_number)
+                except Exception as e:
+                    fetched = None
+                    st.warning(f"No se pudo consultar Fabric: {e}")
+            st.session_state[applied_key] = True
+            if fetched:
+                for key, hit in fetched.items():
+                    st.session_state[f"lab_{consultation_id}_{key}"] = hit["value"]
+                st.session_state[f"fabric_meta_{consultation_id}"] = fetched
+                st.success(
+                    f"Se importaron {len(fetched)} resultado(s) de Fabric a los campos de "
+                    "laboratorio de abajo. Revisa y guarda los datos clínicos para conservarlos."
+                )
+            elif fetched is not None:
+                st.info(f"No se encontraron exámenes en Fabric para {doc_type} {doc_number}.")
+
     tab_data, tab_class, tab_charts = st.tabs(
         ["🩺 Datos clínicos", "🧭 Clasificación", "📊 Gráficas"]
     )
@@ -185,6 +209,7 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
         )
 
         st.markdown("**Laboratorios**")
+        fabric_meta = st.session_state.get(f"fabric_meta_{consultation_id}", {})
         lab_values = {}
         for row_start in range(0, len(LAB_FIELDS), 3):
             lab_cols = st.columns(3)
@@ -193,6 +218,11 @@ def _clinical_data_form(patient, n: int, consultation_id: int) -> None:
                     label, 0.0, max_value,
                     float(labs.get(key) or 0), step, key=f"lab_{consultation_id}_{key}",
                 ) or None
+                hit = fabric_meta.get(key)
+                if hit:
+                    col.caption(
+                        f"📥 Fabric {hit['date'].strftime('%Y-%m-%d')} · {hit['interpretation']}"
+                    )
 
         saved = st.form_submit_button("Guardar datos clínicos", type="primary")
 

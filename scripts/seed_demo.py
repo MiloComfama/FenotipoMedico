@@ -33,7 +33,7 @@ DEMOS = [
     },
     {
         "doc": ("CC", "1002"),
-        "name": "Carlos Cardio (demo)",
+        "name": "Carlos Glicemia (demo)",
         "sex": "Masculino",
         "answers": {
             "sexo": "Masculino",
