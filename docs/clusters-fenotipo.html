@@ -1,0 +1,411 @@
+<title>Fenotipo Médico · Validación de Clusters</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --surface: #F7F5F8;
+    --surface-alt: #FBEAF2;
+    --border: #E6E1EA;
+    --ink: #2A2A33;
+    --muted: #6B6B76;
+    --primary: #FF277E;
+    --primary-dark: #C71760;
+    --success: #1FA97B;
+    --warning: #E9A23B;
+    --danger: #E0334C;
+    --pheno-obesidad: #E0334C;
+    --pheno-dislipidemia: #E9A23B;
+    --pheno-glicemia: #7B4F9E;
+    --pheno-digestivo: #1FA97B;
+    --pheno-bajoriesgo: #3B6FB0;
+    --shadow: 0 1px 2px rgba(42,42,51,.05), 0 8px 24px -12px rgba(42,42,51,.12);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17151B;
+      --surface: #201E26;
+      --surface-alt: #2B1620;
+      --border: #332F3B;
+      --ink: #F3F1F5;
+      --muted: #ACA8B4;
+      --primary: #FF4C93;
+      --primary-dark: #FF7DB0;
+      --success: #2ECC94;
+      --warning: #F0B45C;
+      --danger: #F2536B;
+      --pheno-obesidad: #F2536B;
+      --pheno-dislipidemia: #F0B45C;
+      --pheno-glicemia: #B085E0;
+      --pheno-digestivo: #2ECC94;
+      --pheno-bajoriesgo: #6FA8E8;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17151B; --surface: #201E26; --surface-alt: #2B1620; --border: #332F3B;
+    --ink: #F3F1F5; --muted: #ACA8B4; --primary: #FF4C93; --primary-dark: #FF7DB0;
+    --success: #2ECC94; --warning: #F0B45C; --danger: #F2536B;
+    --pheno-obesidad: #F2536B; --pheno-dislipidemia: #F0B45C; --pheno-glicemia: #B085E0;
+    --pheno-digestivo: #2ECC94; --pheno-bajoriesgo: #6FA8E8;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"] {
+    --bg: #FFFFFF; --surface: #F7F5F8; --surface-alt: #FBEAF2; --border: #E6E1EA;
+    --ink: #2A2A33; --muted: #6B6B76; --primary: #FF277E; --primary-dark: #C71760;
+    --success: #1FA97B; --warning: #E9A23B; --danger: #E0334C;
+    --pheno-obesidad: #E0334C; --pheno-dislipidemia: #E9A23B; --pheno-glicemia: #7B4F9E;
+    --pheno-digestivo: #1FA97B; --pheno-bajoriesgo: #3B6FB0;
+    --shadow: 0 1px 2px rgba(42,42,51,.05), 0 8px 24px -12px rgba(42,42,51,.12);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--primary); color: #fff; }
+
+  .mono {
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', 'SFMono-Regular', monospace;
+  }
+
+  a { color: var(--primary-dark); }
+
+  h1, h2, h3, h4 { text-wrap: balance; font-weight: 700; margin: 0; }
+  p { margin: 0; }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    padding: 40px max(24px, calc(50% - 480px)) 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--surface-alt) 0%, var(--bg) 100%);
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--primary-dark); margin-bottom: 12px;
+  }
+  .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 999px; background: var(--primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+  .masthead h1 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.12; letter-spacing: -.01em; }
+  .masthead .tagline { margin-top: 10px; max-width: 68ch; font-size: 1.05rem; color: var(--muted); line-height: 1.55; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .badge {
+    font-size: .78rem; font-weight: 600; padding: 5px 11px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--ink); white-space: nowrap;
+  }
+  .badge b { color: var(--primary-dark); font-weight: 700; }
+
+  /* ---------- Nav ---------- */
+  nav.toc {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.toc ul {
+    list-style: none; margin: 0; padding: 0 max(24px, calc(50% - 480px));
+    display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin;
+  }
+  nav.toc a {
+    display: inline-block; padding: 12px 12px; font-size: .84rem; font-weight: 600;
+    color: var(--muted); text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--ink); }
+
+  /* ---------- Main content ---------- */
+  main { padding: 8px max(24px, calc(50% - 480px)) 64px; }
+  section { padding-top: 46px; max-width: 980px; }
+  section + section { border-top: 1px solid var(--border); }
+
+  .section-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .section-head .kicker { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: .78rem; color: var(--muted); }
+  h2 { font-size: 1.4rem; }
+  section > .lede { margin-top: 10px; max-width: 76ch; color: var(--muted); line-height: 1.6; font-size: .98rem; }
+  section > .lede + .lede { margin-top: 8px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: .88rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+  td code, td .mono { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: .82rem; color: var(--primary-dark); }
+  .table-wrap { overflow-x: auto; }
+  td.hi { font-weight: 700; border-radius: 6px; }
+
+  .pheno-chip { display: inline-flex; align-items: center; gap: 6px; font-size: .82rem; font-weight: 700; }
+  .pheno-chip::before { content: ""; width: 9px; height: 9px; border-radius: 999px; display: inline-block; }
+  .pheno-obesidad::before { background: var(--pheno-obesidad); }
+  .pheno-dislipidemia::before { background: var(--pheno-dislipidemia); }
+  .pheno-glicemia::before { background: var(--pheno-glicemia); }
+  .pheno-digestivo::before { background: var(--pheno-digestivo); }
+  .pheno-bajoriesgo::before { background: var(--pheno-bajoriesgo); }
+
+  .cluster-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 18px; }
+  .cluster-card { border-top: 4px solid var(--c); }
+  .cluster-card .pct { font-size: 1.9rem; font-weight: 800; margin-top: 6px; }
+  .cluster-card .pct span { font-size: 1rem; font-weight: 600; color: var(--muted); }
+  .cluster-card p.desc { margin-top: 8px; font-size: .87rem; color: var(--muted); line-height: 1.5; }
+  .cluster-card ul { margin: 10px 0 0; padding-left: 18px; font-size: .85rem; color: var(--ink); line-height: 1.55; }
+  .cluster-card li + li { margin-top: 3px; }
+
+  .callout {
+    margin-top: 18px; display: flex; gap: 12px; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--surface-alt); font-size: .88rem; line-height: 1.55;
+  }
+  .callout b { color: var(--primary-dark); }
+  .callout.warn { background: color-mix(in srgb, var(--warning) 14%, var(--bg)); }
+
+  .steps { counter-reset: step; margin-top: 18px; }
+  .step { display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding: 10px 0; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    width: 26px; height: 26px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 700;
+    color: var(--primary-dark); font-family: ui-monospace, monospace;
+  }
+  .step p { font-size: .9rem; color: var(--muted); margin-top: 4px; }
+  .step code { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: .82rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; color: var(--ink); }
+
+  footer {
+    padding: 28px max(24px, calc(50% - 480px)) 40px; border-top: 1px solid var(--border);
+    font-size: .82rem; color: var(--muted); line-height: 1.6;
+  }
+</style>
+
+<header class="masthead">
+  <div class="eyebrow"><span class="dot"></span>Validación del modelo · Databricks / ML</div>
+  <h1>Validación de clusters — fenotipo clínico</h1>
+  <p class="tagline">
+    El modelo anterior segmentaba la población en 3 clusters
+    (Cardiometabólico · Digestivo · Bajo riesgo). Tras comparar 4
+    configuraciones de features y un sweep de <span class="mono">k</span> de 2
+    a 8 sobre el histórico real (16.175 consultas, 4.382 pacientes), el mejor
+    resultado estadístico y clínico es un K-Means (<b>k=5</b>) que separa el
+    antiguo cluster "Cardiometabólico" en <b>tres</b> fenotipos con vías de
+    intervención distintas.
+  </p>
+  <div class="badges">
+    <span class="badge">K-Means <b>k=5</b></span>
+    <span class="badge">Silueta <b>0.186</b></span>
+    <span class="badge">11 features clínicas + GI</span>
+    <span class="badge">scikit-learn</span>
+    <span class="badge">databricks/03 y 04</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#resumen">Resumen</a></li>
+    <li><a href="#comparacion">Comparación de configuraciones</a></li>
+    <li><a href="#fenotipos">Los 5 fenotipos</a></li>
+    <li><a href="#perfil">Perfil clínico</a></li>
+    <li><a href="#reglas">Reglas de clasificación</a></li>
+    <li><a href="#validacion">Validación y límites</a></li>
+    <li><a href="#reproducir">Cómo se generó</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <section id="resumen">
+    <div class="section-head"><span class="kicker">01</span><h2>Resumen</h2></div>
+    <p class="lede">
+      Se probaron 4 subconjuntos de features (todas, solo estilo de vida,
+      solo clínicas, clínicas + síntomas gastrointestinales) en un sweep de
+      <span class="mono">k</span> de 2 a 8, evaluados por silueta. El ganador
+      —clínicas + GI, k=5— no es el de mayor silueta absoluta (esa distinción
+      la tienen configuraciones binarias "riesgo sí/no" con k=2, silueta
+      ~0.32, poco útiles clínicamente), sino el mejor punto de equilibrio
+      entre soporte estadístico y granularidad clínica accionable.
+    </p>
+    <p class="lede">
+      Resultado: <b>5 fenotipos</b> en vez de 3, sin un "Mixto" natural
+      (confirmado también en este sweep más amplio) — el antiguo cluster
+      único "Cardiometabólico" (~15% de la población) resulta ser, en
+      realidad, tres perfiles clínicamente distintos.
+    </p>
+  </section>
+
+  <section id="comparacion">
+    <div class="section-head"><span class="kicker">02</span><h2>Comparación de configuraciones (notebook 03)</h2></div>
+    <p class="lede">Mejor <span class="mono">k</span> y silueta por subconjunto de features, sobre las mismas 16.175 consultas.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Configuración</th><th>Features</th><th>Mejor k</th><th>Silueta</th><th>Veredicto</th></tr></thead>
+        <tbody>
+          <tr><td>Todas (baseline anterior)</td><td class="mono">19</td><td>2–3</td><td>0.144–0.164</td><td>Mezcla clínica + estilo de vida; la señal se diluye.</td></tr>
+          <tr><td>Solo estilo de vida</td><td class="mono">8</td><td>8</td><td>0.298</td><td>Segmentación <i>conductual</i>, no clínica — cambia el propósito del producto.</td></tr>
+          <tr><td>Solo clínicas (sin GI)</td><td class="mono">9</td><td>2</td><td>0.321</td><td>Binario "riesgo sí/no"; no distingue el tipo de riesgo metabólico.</td></tr>
+          <tr><td><b>Clínicas + síntomas GI</b> ✅</td><td class="mono">11</td><td><b>5</b></td><td><b>0.186</b></td><td>Máximo local claro; 5 fenotipos clínicamente interpretables.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <b>Por qué no el de mayor silueta absoluta:</b> las configuraciones con
+      silueta más alta (~0.30–0.32) colapsan a un simple "alto riesgo / bajo
+      riesgo" (k=2) o a una segmentación por hábitos de vida — ninguna
+      distingue <i>qué</i> eje clínico está afectado, que es el propósito del
+      programa de Medicina Funcional.
+    </div>
+  </section>
+
+  <section id="fenotipos">
+    <div class="section-head"><span class="kicker">03</span><h2>Los 5 fenotipos</h2></div>
+    <p class="lede">Tamaño de cada cluster sobre el histórico de entrenamiento (16.175 consultas).</p>
+    <div class="cluster-grid">
+      <div class="card cluster-card" style="--c:var(--pheno-bajoriesgo)">
+        <span class="pheno-chip pheno-bajoriesgo">Bajo riesgo</span>
+        <div class="pct">33.4% <span>· 5.399</span></div>
+        <p class="desc">Los marcadores más bajos en las 11 dimensiones clínicas. Sin uso de medicamentos cardiometabólicos ni síntomas GI relevantes.</p>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-obesidad)">
+        <span class="pheno-chip pheno-obesidad">Obesidad</span>
+        <div class="pct">28.7% <span>· 4.642</span></div>
+        <p class="desc">IMC, perímetro abdominal y presión arterial más altos del grupo. Sin uso predominante de medicamentos específicos.</p>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-glicemia)">
+        <span class="pheno-chip pheno-glicemia">Glicemia</span>
+        <div class="pct">14.0% <span>· 2.257</span></div>
+        <p class="desc">HbA1c más alta (rango prediabetes/diabetes) y ~99% usa hipoglicemiantes.</p>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-dislipidemia)">
+        <span class="pheno-chip pheno-dislipidemia">Dislipidemia</span>
+        <div class="pct">13.9% <span>· 2.241</span></div>
+        <p class="desc">Colesterol total más alto del grupo y ~100% usa hipolipemiantes.</p>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-digestivo)">
+        <span class="pheno-chip pheno-digestivo">Digestivo</span>
+        <div class="pct">10.1% <span>· 1.636</span></div>
+        <p class="desc">2+ síntomas gastrointestinales en promedio; 100% usa antiácidos/IBP.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="perfil">
+    <div class="section-head"><span class="kicker">04</span><h2>Perfil clínico (medias por cluster)</h2></div>
+    <p class="lede">Celda resaltada = valor más alto de la fila entre los 5 fenotipos (más bajo para colesterol HDL, donde el riesgo va en sentido inverso).</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th class="pheno-chip pheno-bajoriesgo">Bajo riesgo</th>
+            <th class="pheno-chip pheno-obesidad">Obesidad</th>
+            <th class="pheno-chip pheno-dislipidemia">Dislipidemia</th>
+            <th class="pheno-chip pheno-glicemia">Glicemia</th>
+            <th class="pheno-chip pheno-digestivo">Digestivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>IMC</td><td>24.67</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-obesidad) 16%, transparent)">33.33</td><td>27.64</td><td>29.52</td><td>26.16</td></tr>
+          <tr><td>Perímetro abdominal (cm)</td><td>81.11</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-obesidad) 16%, transparent)">101.12</td><td>90.64</td><td>96.47</td><td>86.12</td></tr>
+          <tr><td>Presión sistólica (mmHg)</td><td>115.60</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-obesidad) 16%, transparent)">120.77</td><td>118.86</td><td>120.02</td><td>117.56</td></tr>
+          <tr><td>Presión diastólica (mmHg)</td><td>75.19</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-obesidad) 16%, transparent)">78.53</td><td>77.57</td><td>78.19</td><td>76.38</td></tr>
+          <tr><td>Colesterol total (mg/dL)</td><td>198.70</td><td>189.49</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-dislipidemia) 20%, transparent)">201.19</td><td>176.39</td><td>196.38</td></tr>
+          <tr><td>Colesterol HDL (mg/dL)</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-bajoriesgo) 16%, transparent)">54.46</td><td>43.64</td><td>49.19</td><td>46.84</td><td>51.34</td></tr>
+          <tr><td>HbA1c (%)</td><td>5.35</td><td>5.51</td><td>5.60</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-glicemia) 20%, transparent)">6.37</td><td>5.52</td></tr>
+          <tr><td>Usa hipoglicemiantes</td><td>0.00</td><td>0.01</td><td>0.00</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-glicemia) 20%, transparent)">0.99</td><td>0.00</td></tr>
+          <tr><td>Usa hipolipemiantes</td><td>0.00</td><td>0.02</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-dislipidemia) 20%, transparent)">1.00</td><td>0.79</td><td>0.00</td></tr>
+          <tr><td>Nº síntomas GI (promedio)</td><td>0.96</td><td>0.29</td><td>0.05</td><td>0.02</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-digestivo) 20%, transparent)">2.09</td></tr>
+          <tr><td>Usa antiácidos/IBP</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td class="hi" style="background:color-mix(in srgb, var(--pheno-digestivo) 20%, transparent)">1.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="reglas">
+    <div class="section-head"><span class="kicker">05</span><h2>Reglas de clasificación por fenotipo</h2></div>
+    <p class="lede">
+      Cómo se etiqueta cada cluster (ver <span class="mono">scripts/train_model.py::_label_clusters</span>)
+      y qué señales explica el modelo al paciente/médico (ver
+      <span class="mono">app/domain/ml_model.py::_build_rationale</span>).
+    </p>
+    <div class="cluster-grid">
+      <div class="card cluster-card" style="--c:var(--pheno-obesidad)">
+        <span class="pheno-chip pheno-obesidad">Obesidad</span>
+        <ul>
+          <li>IMC ≥ 30 (o 25–30 con menor peso) más alto entre los clusters sin fármaco dominante.</li>
+          <li>Perímetro abdominal elevado (≥ 80/90 cm según sexo, umbral clínico usado en la explicación).</li>
+          <li>Presión arterial ≥ 130/85 mmHg.</li>
+          <li><i>No</i> tiene uso predominante de hipoglicemiantes/hipolipemiantes ni síntomas GI — si los tuviera, cae en Glicemia/Dislipidemia/Digestivo primero.</li>
+        </ul>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-dislipidemia)">
+        <span class="pheno-chip pheno-dislipidemia">Dislipidemia</span>
+        <ul>
+          <li>Uso de hipolipemiantes (≈100% del cluster).</li>
+          <li>Colesterol total ≥ 200 mg/dL y/o HDL bajo (&lt; 40 mg/dL).</li>
+        </ul>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-glicemia)">
+        <span class="pheno-chip pheno-glicemia">Glicemia</span>
+        <ul>
+          <li>Uso de hipoglicemiantes (≈99% del cluster).</li>
+          <li>HbA1c ≥ 5.7% (prediabetes) o ≥ 6.5% (diabetes).</li>
+        </ul>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-digestivo)">
+        <span class="pheno-chip pheno-digestivo">Digestivo</span>
+        <ul>
+          <li>1 o más síntomas gastrointestinales reportados (reflujo, distensión, dolor abdominal, hábito intestinal alterado…).</li>
+          <li>Uso de antiácidos/IBP (≈100% del cluster).</li>
+          <li>Contribuye también: estrés alto sin técnica de manejo.</li>
+        </ul>
+      </div>
+      <div class="card cluster-card" style="--c:var(--pheno-bajoriesgo)">
+        <span class="pheno-chip pheno-bajoriesgo">Bajo riesgo</span>
+        <ul>
+          <li>No cumple ningún criterio anterior — el cluster "por defecto".</li>
+          <li>El más grande de los 5 (33.4%): la mayoría de la población no tiene marcadores elevados.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout">
+      En producción, el fenotipo final es el de <b>mayor afinidad</b> (percentil de cercanía al centroide de cada cluster), no una regla de umbrales aplicada en cascada — las reglas de arriba resumen qué distingue a cada cluster para efectos de validación clínica.
+    </div>
+  </section>
+
+  <section id="validacion">
+    <div class="section-head"><span class="kicker">06</span><h2>Validación y limitaciones</h2></div>
+    <div class="callout warn">
+      <b>No hay "Mixto" natural.</b> Se confirmó también en este sweep más amplio (4 configuraciones × k=2 a 8): un paciente puede tener afinidad alta a más de un fenotipo (visible en <span class="mono">scores</span>), pero no existe un cluster propio para esa combinación.
+    </div>
+    <div class="callout warn">
+      <b>No hay variable de sexo</b> en el histórico para ajustar el perímetro abdominal dentro del clustering no supervisado (sí se usa el ajuste por sexo en las explicaciones del clasificador de reglas de respaldo).
+    </div>
+    <div class="callout warn">
+      <b>No hay <i>ground truth</i> clínico</b> contra el cual medir accuracy, al ser un modelo no supervisado — se recomienda validación progresiva del equipo médico vía la reclasificación manual ya disponible en la consola médica.
+    </div>
+    <div class="callout warn">
+      <b>Estilo de vida no participa en la definición del fenotipo</b> — se probó incluirlo (notebook 03) y empeoraba tanto la silueta como la interpretación clínica. Sigue disponible para el paciente como explicación (<span class="mono">rationale</span>), no como criterio de clasificación.
+    </div>
+  </section>
+
+  <section id="reproducir">
+    <div class="section-head"><span class="kicker">07</span><h2>Cómo se generó</h2></div>
+    <div class="steps">
+      <div class="step"><p><span class="mono">databricks/01_ingesta_exploracion.ipynb</span> — carga y limpia el Excel fuente (16.204 → 16.175 filas).</p></div>
+      <div class="step"><p><span class="mono">databricks/02_preprocesamiento.ipynb</span> — deriva las 11 features clínicas + GI y las 8 de estilo de vida.</p></div>
+      <div class="step"><p><span class="mono">databricks/03_entrenamiento_clustering.ipynb</span> — sweep de 4 configuraciones × k=2–8, perfilamiento del ganador.</p></div>
+      <div class="step"><p><span class="mono">databricks/04_perfilamiento_inferencia.ipynb</span> — entrena el K-Means final, guarda <span class="mono">data/model.pkl</span> y verifica la integración con la app.</p></div>
+    </div>
+    <p class="lede" style="margin-top:14px;">
+      Para reentrenar fuera de un notebook: <code>py scripts/train_model.py</code>.
+      Detalle completo en <a href="../databricks/README.md">databricks/README.md</a>.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  ⚠️ Documento de validación del modelo, generado a partir del histórico real
+  del programa. Las categorías y umbrales deben ser revisados y avalados por
+  el equipo asistencial de Comfama antes de un uso clínico real.
+  <br/>Fenotipo Médico · Programa de Medicina Funcional, Comfama.
+</footer>
